@@ -1,4 +1,4 @@
-﻿using OpenTelemetry.Logs;
+using OpenTelemetry.Logs;
 using Microsoft.Extensions.Logging;
 using Azure.Monitor.OpenTelemetry.Exporter;
 using AI.Boilerplate.Client.Windows.Infrastructure.Services;
@@ -23,7 +23,8 @@ public static partial class Program
             var handlerFactory = sp.GetRequiredService<HttpMessageHandlersChainFactory>();
             var httpClient = new HttpClient(handlerFactory.Invoke())
             {
-                BaseAddress = new Uri(configuration.GetServerAddress(), UriKind.Absolute)
+                BaseAddress = new Uri(configuration.GetServerAddress(), UriKind.Absolute),
+                Timeout = TimeSpan.FromMinutes(10)
             };
             if (sp.GetRequiredService<ClientWindowsSettings>().WebAppUrl is Uri origin)
             {

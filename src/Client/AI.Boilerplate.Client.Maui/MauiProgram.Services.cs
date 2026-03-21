@@ -27,9 +27,10 @@ public static partial class MauiProgram
             var handlerFactory = sp.GetRequiredService<HttpMessageHandlersChainFactory>();
             var httpClient = new HttpClient(handlerFactory.Invoke())
             {
-                BaseAddress = new Uri(configuration.GetServerAddress(), UriKind.Absolute)
+                BaseAddress = new Uri(configuration.GetServerAddress(), UriKind.Absolute),
+                Timeout = TimeSpan.FromMinutes(10)
             };
-            if (sp.GetRequiredService<ClientMauiSettings>().WebAppUrl is Uri origin)
+            if (Uri.TryCreate(configuration.GetServerAddress(), UriKind.Absolute, out var origin))
             {
                 httpClient.DefaultRequestHeaders.Add("X-Origin", origin.ToString());
             }
