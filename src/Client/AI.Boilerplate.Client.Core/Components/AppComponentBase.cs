@@ -1,4 +1,4 @@
-﻿using System.Runtime.CompilerServices;
+using System.Runtime.CompilerServices;
 
 namespace AI.Boilerplate.Client.Core.Components;
 
@@ -120,6 +120,10 @@ public partial class AppComponentBase : OwningComponentBase, IAsyncDisposable
             try
             {
                 await OnAfterFirstRenderAsync();
+            }
+            catch (JSException ex) when (ex.Message.Contains("There is no tracked object with id"))
+            {
+                // Ignore JSInterop Object Disposed Exception during prerendering / circuit drop
             }
             catch (Exception exp)
             {

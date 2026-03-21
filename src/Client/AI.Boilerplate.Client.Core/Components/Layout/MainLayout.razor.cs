@@ -1,4 +1,4 @@
-﻿using System.Reflection;
+using System.Reflection;
 using AI.Boilerplate.Shared.Features.Identity;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
 
@@ -123,6 +123,10 @@ public partial class MainLayout : IAsyncDisposable
         try
         {
             await SetCurrentUser(task);
+        }
+        catch (JSException ex) when (ex.Message.Contains("There is no tracked object with id"))
+        {
+            // Ignore JSInterop Object Disposed Exception during prerendering / circuit drop
         }
         catch (Exception ex)
         {

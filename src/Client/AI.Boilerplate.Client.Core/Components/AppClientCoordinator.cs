@@ -1,4 +1,4 @@
-﻿using System.Web;
+using System.Web;
 using Microsoft.AspNetCore.SignalR;
 using Microsoft.AspNetCore.SignalR.Client;
 using BlazorApplicationInsights.Interfaces;
@@ -90,7 +90,14 @@ public partial class AppClientCoordinator : AppComponentBase
             NavigationManager.LocationChanged += NavigationManager_LocationChanged;
             AuthManager.AuthenticationStateChanged += AuthenticationStateChanged;
             SubscribeToSignalRSharedAppMessages();
-            await PropagateAuthState(firstRun: true, AuthenticationStateTask);
+            try
+            {
+                await PropagateAuthState(firstRun: true, AuthenticationStateTask);
+            }
+            catch (JSException ex) when (ex.Message.Contains("There is no tracked object with id"))
+            {
+                // Ignore JSInterop Object Disposed Exception during prerendering / circuit drop
+            }
         }
     }
 
@@ -160,9 +167,20 @@ public partial class AppClientCoordinator : AppComponentBase
         }
     }
 
-    private void AuthenticationStateChanged(Task<AuthenticationState> task)
+    private async void AuthenticationStateChanged(Task<AuthenticationState> task)
     {
-        _ = PropagateAuthState(firstRun: false, task);
+        try
+        {
+            await PropagateAuthState(firstRun: false, task);
+        }
+        catch (JSException ex) when (ex.Message.Contains("There is no tracked object with id"))
+        {
+            // Ignore JSInterop Object Disposed Exception during prerendering / circuit drop
+        }
+        catch (Exception ex)
+        {
+            ExceptionHandler.Handle(ex);
+        }
     }
 
     private void SubscribeToSignalRSharedAppMessages()

@@ -1,4 +1,4 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Microsoft.AspNetCore.SignalR;
 using AI.Boilerplate.Shared.Features.Diagnostic;
@@ -12,12 +12,13 @@ namespace AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 public partial class AppChatbot
 {
     /// <summary>
-    /// Returns the current date and time based on the user's timezone.
+    /// 返回基于用户时区的当前日期和时间。
     /// </summary>
-    [Description("Returns the current date and time based on the user's timezone.")]
+    [Description("返回基于用户所在时区的当前日期和时间。")]
     [McpServerTool(Name = nameof(GetCurrentDateTime))]
-    private string GetCurrentDateTime([Required, Description("User's timezone id")] string timeZoneId)
+    private string GetCurrentDateTime([Required, Description("用户的时区ID (例如: Asia/Shanghai)")] string timeZoneId)
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(GetCurrentDateTime)} (timeZoneId: {timeZoneId})");
         try
         {
             var timeZone = TimeZoneInfo.FindSystemTimeZoneById(timeZoneId);
@@ -33,14 +34,15 @@ public partial class AppChatbot
     }
 
     /// <summary>
-    /// Saves the user's email address and the conversation history for future reference.
+    /// 保存用户的电子邮箱地址和对话历史以供日后参考。
     /// </summary>
-    [Description("Saves the user's email address and the conversation history for future reference.")]
+    [Description("保存用户的电子邮箱地址和对话历史以供日后参考或问题排查。")]
     [McpServerTool(Name = nameof(SaveUserEmailAndConversationHistory))]
     private async Task<string?> SaveUserEmailAndConversationHistory(
-        [Required, Description("User's email address")] string emailAddress,
-        [Required, Description("Full conversation history")] string conversationHistory)
+        [Required, Description("用户的电子邮箱地址")] string emailAddress,
+        [Required, Description("完整的对话历史记录")] string conversationHistory)
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(SaveUserEmailAndConversationHistory)} (emailAddress: {emailAddress})");
         try
         {
             await using var scope = serviceProvider.CreateAsyncScope();
@@ -60,13 +62,14 @@ public partial class AppChatbot
     }
 
     /// <summary>
-    /// Navigates the user to a specific page within the application.
+    /// 将用户导航到应用程序中的特定页面。
     /// </summary>
-    [Description("Navigates the user to a specific page within the application. Use this tool when the user requests to go to a particular section or feature of the app.")]
+    [Description("将用户导航到应用程序中的特定页面。当用户要求前往应用程序的某个特定部分或功能时，请使用此工具。")]
     [McpServerTool(Name = nameof(NavigateToPage))]
     private async Task<string?> NavigateToPage(
-        [Required, Description("Page URL to navigate to")] string pageUrl)
+        [Required, Description("要导航到的目标页面URL")] string pageUrl)
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(NavigateToPage)} (pageUrl: {pageUrl})");
         await EnsureSignalRConnectionIdIsPresent();
 
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -86,10 +89,11 @@ public partial class AppChatbot
         }
     }
 
-    [Description(@"Displays the sign-in modal to the user and waits for either successful sign-in or cancellation")]
+    [Description("向用户显示登录弹窗，并等待登录成功或取消操作。")]
     [McpServerTool(Name = nameof(ShowSignInModal))]
     public async Task<UserDto?> ShowSignInModal()
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(ShowSignInModal)}");
         await using var scope = serviceProvider.CreateAsyncScope();
 
         try
@@ -117,13 +121,14 @@ public partial class AppChatbot
     }
 
     /// <summary>
-    /// Changes the user's culture/language setting.
+    /// 更改用户的区域/语言设置。
     /// </summary>
-    [Description("Changes the user's culture/language setting. Use this tool when the user requests to change the app language. Common LCIDs: 1033=en-US, 1065=fa-IR, 1053=sv-SE, 2057=en-GB, 1043=nl-NL, 1081=hi-IN, 2052=zh-CN, 3082=es-ES, 1036=fr-FR, 1025=ar-SA, 1031=de-DE.")]
+    [Description("更改用户的区域/语言设置。当用户要求更改应用程序语言时，请使用此工具。常见LCID代码：1033=英文(en-US)，1065=波斯文(fa-IR)，1053=瑞典文(sv-SE)，2057=英式英文(en-GB)，1043=荷兰文(nl-NL)，1081=印地文(hi-IN)，2052=简体中文(zh-CN)，3082=西班牙文(es-ES)，1036=法文(fr-FR)，1025=阿拉伯文(ar-SA)，1031=德文(de-DE)。")]
     [McpServerTool(Name = nameof(SetCulture))]
     private async Task<string?> SetCulture(
-        [Required, Description("Culture LCID (e.g., 1033 for en-US, 1065 for fa-IR)")] int cultureLcid)
+        [Required, Description("区域LCID代码 (例如：1033代表en-US, 2052代表zh-CN)")] int cultureLcid)
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(SetCulture)} (cultureLcid: {cultureLcid})");
         await EnsureSignalRConnectionIdIsPresent();
 
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -149,13 +154,14 @@ public partial class AppChatbot
     }
 
     /// <summary>
-    /// Changes the user's theme preference between light and dark mode.
+    /// 在亮色和暗色模式之间更改用户的主题偏好。
     /// </summary>
-    [Description("Changes the user's theme preference between light and dark mode. Use this tool when the user requests to change the app theme or appearance.")]
+    [Description("在亮色和暗色模式之间更改用户的主题偏好。当用户要求更改应用程序主题或外观时，请使用此工具。")]
     [McpServerTool(Name = nameof(SetTheme))]
     private async Task<string?> SetTheme(
-        [Required, Description("Theme name: 'light' or 'dark'")] string theme)
+        [Required, Description("主题名称：'light'(亮色) 或 'dark'(暗色)")] string theme)
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(SetTheme)} (theme: {theme})");
         await EnsureSignalRConnectionIdIsPresent();
 
         if (theme != "light" && theme != "dark")
@@ -179,12 +185,13 @@ public partial class AppChatbot
     }
 
     /// <summary>
-    /// Retrieves the last error that occurred on the user's device from the diagnostic logs.
+    /// 从诊断日志中检索用户设备上发生的最后一个错误。
     /// </summary>
-    [Description("Retrieves the last error that occurred on the user's device from the diagnostic logs. Use this tool when troubleshooting user-reported issues, investigating application crashes, or when the user mentions something isn't working.")]
+    [Description("从诊断日志中检索用户设备上发生的最后一个错误。在排查用户报告的问题、调查应用程序崩溃或当用户提到某些功能不起作用时，请使用此工具。")]
     [McpServerTool(Name = nameof(CheckLastError))]
     private async Task<string?> CheckLastError()
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(CheckLastError)}");
         await EnsureSignalRConnectionIdIsPresent();
 
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -208,12 +215,13 @@ public partial class AppChatbot
     }
 
     /// <summary>
-    /// Clears application files on the user's device to fix issues.
+    /// 清除用户设备上的应用程序文件以修复问题。
     /// </summary>
-    [Description("Clears application files on the user's device to fix issues.")]
+    [Description("清除用户设备上的应用程序文件（缓存）以修复可能存在的问题。")]
     [McpServerTool(Name = nameof(ClearAppFiles))]
     private async Task<string?> ClearAppFiles()
     {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(ClearAppFiles)}");
         await EnsureSignalRConnectionIdIsPresent();
 
         await using var scope = serviceProvider.CreateAsyncScope();
