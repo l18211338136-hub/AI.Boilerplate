@@ -1,0 +1,62 @@
+{
+    "version": "1",
+
+    "dir": "ltr",
+    "lang": "en",
+    "scope": "/",
+    "start_url": "/",
+    "orientation": "any",
+    "id": "bitAI.Boilerplate",
+    "display": "standalone",
+    "theme_color": "#2EA3FF",
+    "name": "bit AI.Boilerplate",
+    "background_color": "#0D2960",
+    "short_name": "bit AI.Boilerplate",
+    "prefer_related_applications": false,
+    "display_override": [ "window-controls-overlay" ],
+    "description": "bit AI.Boilerplate is a project template that includes all the necessary parts to create a fully-featured web app.",
+
+    "related_applications": [],
+    "capture_links": "existing-client-navigate",
+    "launch_handler": {
+        "client_mode": "auto"
+    },
+
+    "features": [
+        "Cross Platform",
+        "fast",
+        "simple"
+    ],
+    "categories": [
+        "utilities"
+    ],
+    "icons": [
+        {
+            "sizes": "512x512",
+            "type": "image/png",
+            "src": "images/icons/bit-icon-512.png"
+        }
+    ],
+    "shortcuts": [
+        {
+            "name": "Terms",
+            "url": "/terms"
+        },
+        {
+            "name": "Todo",
+            "url": "/todo"
+        },
+        {
+            "name": "Categories",
+            "url": "/categories"
+        },
+        {
+            "name": "Products",
+            "url": "/products"
+        },
+        {
+            "name": "Profile",
+            "url": "/profile"
+        }
+    ]
+}

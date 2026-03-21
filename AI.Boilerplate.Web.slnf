@@ -1,0 +1,14 @@
+{
+  "solution": {
+    "path": "AI.Boilerplate.slnx",
+    "projects": [
+      "src\\Client\\AI.Boilerplate.Client.Core\\AI.Boilerplate.Client.Core.csproj",
+      "src\\Client\\AI.Boilerplate.Client.Web\\AI.Boilerplate.Client.Web.csproj",
+      "src\\Server\\AI.Boilerplate.Server.Api\\AI.Boilerplate.Server.Api.csproj",
+      "src\\Server\\AI.Boilerplate.Server.Shared\\AI.Boilerplate.Server.Shared.csproj",
+      "src\\Server\\AI.Boilerplate.Server.Web\\AI.Boilerplate.Server.Web.csproj",
+      "src\\Shared\\AI.Boilerplate.Shared.csproj",
+      "src\\Tests\\AI.Boilerplate.Tests.csproj"
+    ]
+  }
+}

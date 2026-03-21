@@ -1,0 +1,62 @@
+{
+    "profiles": {
+        "AI.Boilerplate.Server.Api": {
+            "commandName": "Project",
+            "launchBrowser": true,
+            "launchUrl": "scalar",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            },
+            "dotnetRunMessages": true,
+            "applicationUrl": "http://*:5137"
+        },
+        "WSL": {
+            "commandName": "WSL2",
+            "launchBrowser": true,
+            "launchUrl": "scalar",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development",
+                "ASPNETCORE_URLS": "http://*:5137"
+            }
+        },
+        "Docker": {
+            "commandName": "SdkContainer",
+            "launchBrowser": true,
+            "launchUrl": "{Scheme}://{ServiceHost}:{ServicePort}/scalar",
+            "DockerfileRunArguments": "-v C:\\DockerVolumes\\31E6CAD8-3C76-46B3-A056-C08F574DC157:/container_volume",
+            "environmentVariables": {
+                "ASPNETCORE_HTTP_PORTS": "5137",
+                "ConnectionStrings__sqlite": "Data Source=/container_volume/App_Data/AI.BoilerplateDb.db;"
+            },
+            "publishAllPorts": true,
+            "useSSL": false,
+            "httpPort": 5137
+        },
+        "IIS Express": {
+            "commandName": "IISExpress",
+            "launchBrowser": true,
+            "launchUrl": "scalar",
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        },
+        "IIS": {
+            "commandName": "IIS",
+            "launchBrowser": true,
+            "environmentVariables": {
+                "ASPNETCORE_ENVIRONMENT": "Development"
+            }
+        }
+    },
+    "iisSettings": {
+        "windowsAuthentication": false,
+        "anonymousAuthentication": true,
+        "iis": {
+            "applicationUrl": "http://localhost:5137/"
+        },
+        "iisExpress": {
+            "applicationUrl": "http://localhost:5137/"
+        }
+    },
+    "$schema": "http://json.schemastore.org/launchsettings.json"
+}

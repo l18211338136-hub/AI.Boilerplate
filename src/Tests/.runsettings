@@ -1,0 +1,35 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- +:cnd:noEmit -->
+<RunSettings>
+
+    <RunConfiguration>
+        <CollectSourceInformation>true</CollectSourceInformation>
+        <EnvironmentVariables>
+            
+            <!-- https://playwright.dev/docs/debug -->
+            <!--<HEADED>1</HEADED>-->
+            <!--<PWDEBUG>1</PWDEBUG>-->
+            <!--<BROWSER>firefox</BROWSER>-->
+
+            <!-- You can override the configuration from appsettings.json for tests here. -->
+            <ConnectionStrings__sqlite>Data Source=AI.BoilerplateDb.db;Mode=Memory;Cache=Shared;</ConnectionStrings__sqlite>
+            <Hangfire__UseIsolatedStorage>true</Hangfire__UseIsolatedStorage>
+        </EnvironmentVariables>
+    </RunConfiguration>
+
+    <!-- https://learn.microsoft.com/en-us/visualstudio/test/configure-unit-tests-by-using-a-dot-runsettings-file -->
+    <LoggerRunSettings>
+        <Loggers>
+            <Logger friendlyName="html" enabled="True">
+                <Configuration>
+                    <LogFileName>TestResults.html</LogFileName>
+                </Configuration>
+            </Logger>
+            <Logger friendlyName="trx" enabled="True">
+                <Configuration>
+                    <LogFileName>TestResults.trx</LogFileName>
+                </Configuration>
+            </Logger>
+        </Loggers>
+    </LoggerRunSettings>
+</RunSettings>

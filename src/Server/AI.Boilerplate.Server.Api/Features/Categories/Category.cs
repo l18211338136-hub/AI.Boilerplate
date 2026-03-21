@@ -1,0 +1,17 @@
+﻿using AI.Boilerplate.Server.Api.Features.Products;
+
+namespace AI.Boilerplate.Server.Api.Features.Categories;
+
+public partial class Category
+{
+    public Guid Id { get; set; }
+
+    [Required, MaxLength(64)]
+    public string? Name { get; set; }
+
+    public string? Color { get; set; }
+
+    public long Version { get; set; }
+
+    public IList<Product> Products { get; set; } = [];
+}

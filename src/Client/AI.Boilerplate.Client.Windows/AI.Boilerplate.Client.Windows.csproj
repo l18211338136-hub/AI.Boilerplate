@@ -1,0 +1,89 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <OutputType>WinExe</OutputType>
+        <TargetFramework>net10.0-windows</TargetFramework>
+        <Nullable>enable</Nullable>
+        <ImplicitUsings>enable</ImplicitUsings>
+        <UseWindowsForms>true</UseWindowsForms>
+        <EnableWindowsTargeting>true</EnableWindowsTargeting>
+        <RootNamespace>AI.Boilerplate.Client.Windows</RootNamespace>
+        <StartupObject>AI.Boilerplate.Client.Windows.Program</StartupObject>
+        <ApplicationIcon>wwwroot\favicon.ico</ApplicationIcon>
+        <ResolveStaticWebAssetsInputsDependsOn>
+            BeforeBuildTasks;
+            $(ResolveStaticWebAssetsInputsDependsOn)
+        </ResolveStaticWebAssetsInputsDependsOn>
+        <NoWarn>$(NoWarn);WFO5001</NoWarn>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="'$(Environment)' != 'Development'">
+        <PublishTrimmed>true</PublishTrimmed>
+        <TrimMode>partial</TrimMode>
+        <BuiltInComInteropSupport>true</BuiltInComInteropSupport>
+        <_SuppressWinFormsTrimError>true</_SuppressWinFormsTrimError>
+        <JsonSerializerIsReflectionEnabledByDefault>true</JsonSerializerIsReflectionEnabledByDefault>
+        <CompressionEnabled>false</CompressionEnabled>
+        <!-- Enabling compression generates `.br` and `.gz` files for static assets.
+        While this is beneficial for Blazor WebAssembly, it only adds to the app bundle size in MAUI without offering any advantages. -->
+    </PropertyGroup>
+
+    <ItemGroup>
+        <Using Include="AI.Boilerplate.Client.Core.Components.Layout" />
+        <Using Include="AI.Boilerplate.Client.Core.Components.Pages" />
+        <Using Include="AI.Boilerplate.Client.Core.Infrastructure.Services" />
+        <Using Include="AI.Boilerplate.Client.Core.Infrastructure.Services.Contracts" />
+        <Using Include="AI.Boilerplate.Shared" />
+
+        <PackageReference Include="EmbedIO" />
+        <PackageReference Include="Bit.BlazorES2019" />
+        <PackageReference Include="Microsoft.Extensions.Configuration.EnvironmentVariables" />
+        <PackageReference Include="Microsoft.Extensions.Logging.EventLog" />
+        <PackageReference Include="Microsoft.Extensions.Logging.EventSource" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.WindowsForms" />
+        <PackageReference Include="Microsoft.Web.WebView2" />
+        <PackageReference Include="OpenTelemetry.Exporter.OpenTelemetryProtocol" />
+        <PackageReference Include="Velopack" />
+                <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
+                <Content Include="..\AI.Boilerplate.Client.Maui\wwwroot\index.html" Link="wwwroot\index.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include="..\AI.Boilerplate.Client.Web\wwwroot\web-interop-app.html" Link="wwwroot\web-interop-app.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        <Content Include=".config\dotnet-tools.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AI.Boilerplate.Client.Core\AI.Boilerplate.Client.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Resource Include="Resources\**\*.*" />
+        <Content Remove="appsettings*.json" />
+        <EmbeddedResource Include="appsettings*.json" />
+    </ItemGroup>
+
+    <Target Name="BeforeBuildTasks" AfterTargets="CoreCompile">
+        <CallTarget Targets="BuildCssFiles" />
+    </Target>
+
+    <Target Name="BuildCssFiles">
+        <Exec Command="../AI.Boilerplate.Client.Core/node_modules/.bin/sass Components:Components --style compressed --silence-deprecation=import --update --color" StandardOutputImportance="high" StandardErrorImportance="high" LogStandardErrorAsError="true" />
+    </Target>
+
+    <Target Name="RemoveFilesAfterPublish" AfterTargets="Publish">
+        <!-- Unneccecary files because of Microsoft.Web.WebView2.Wpf etc. -->
+        <ItemGroup>
+            <FilesToDelete Include="$(PublishDir)wpfgfx_cor3.dll" />
+            <FilesToDelete Include="$(PublishDir)WindowsBase.dll" />
+            <FilesToDelete Include="$(PublishDir)PresentationCore.dll" />
+            <FilesToDelete Include="$(PublishDir)D3DCompiler_47_cor3.dll" />
+            <FilesToDelete Include="$(PublishDir)PresentationFramework.dll" />
+            <FilesToDelete Include="$(PublishDir)System.Windows.Forms.Design.dll" />
+        </ItemGroup>
+        <Delete Files="@(FilesToDelete)" />
+    </Target>
+
+</Project>

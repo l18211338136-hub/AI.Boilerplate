@@ -1,0 +1,92 @@
+@attribute [Route(PageUrls.Home)]
+@attribute [Route("{culture:nonfile?}" + PageUrls.Home)]
+@attribute [AppResponseCache(SharedMaxAge = 3600 * 24, MaxAge = 60 * 5)]
+@inherits AppPageBase
+
+<AppPageData Title="@Localizer[nameof(AppStrings.Home)]"
+             PageTitle="@Localizer[nameof(AppStrings.HomePageTitle)]" />
+
+<section>
+    <BitStack Alignment="BitAlignment.Center" Gap="2rem" Class="root-stack">
+        <BitText Typography="BitTypography.H2" Align="BitTextAlign.Center" Style="margin-top: 2rem; color: var(--bit-clr-fg-primary); font-weight: bold;">
+            欢迎使用 AI.Boilerplate 
+        </BitText>
+        <BitText Typography="BitTypography.H5" Align="BitTextAlign.Center" Style="color: var(--bit-clr-fg-sec);">
+            下一代 AI 驱动的全栈现代化应用程序框架
+        </BitText>
+
+        <BitText Typography="BitTypography.Body1" Align="BitTextAlign.Center" Style="max-width: 800px; margin: 0 auto; line-height: 1.8;">
+            AI.Boilerplate 突破了传统框架的限制，将大语言模型（LLM）、向量检索（RAG）和模型上下文协议（MCP）等前沿人工智能技术深度整合到您的业务流程中。无论您是要构建智能助手、自动化工作流，还是企业级数据分析平台，这里都为您提供了一站式的强力支撑。
+        </BitText>
+
+        <CascadingValue Value="BitDir.Ltr">
+            <BitCard FullWidth Style="padding:2rem; margin-top: 1rem; border-top: 4px solid var(--bit-clr-primary-main);">
+                <BitStack>
+                    <BitText Typography="BitTypography.H4" Style="margin-bottom: 1rem;">🔥 核心能力概览</BitText>
+                    <BitStack Horizontal Gap="2rem" Class="bit-products-stack">
+                        <BitStack Gap="1rem" Style="flex: 1;">
+                            <BitText Typography="BitTypography.H6">🧠 强大的 AI 引擎集成</BitText>
+                            <BitText Typography="BitTypography.Body2" Style="color: var(--bit-clr-fg-sec);">
+                                零缝隙对接本地化部署的 Ollama 以及各类云端主流大模型，提供开箱即用的 AI 对话、文本生成和逻辑推理能力，同时确保企业数据安全。
+                            </BitText>
+                        </BitStack>
+                        <BitStack Gap="1rem" Style="flex: 1;">
+                            <BitText Typography="BitTypography.H6">📚 RAG 与向量检索</BitText>
+                            <BitText Typography="BitTypography.Body2" Style="color: var(--bit-clr-fg-sec);">
+                                内置高效的向量数据库支持，轻松实现文档解析、语义搜索和超长上下文记忆，让您的 AI 真正懂您的专有知识库。
+                            </BitText>
+                        </BitStack>
+                        <BitStack Gap="1rem" Style="flex: 1;">
+                            <BitText Typography="BitTypography.H6">🔌 MCP 智能扩展</BitText>
+                            <BitText Typography="BitTypography.Body2" Style="color: var(--bit-clr-fg-sec);">
+                                采用最新的 Model Context Protocol (MCP) 架构，赋予 AI 助手直接调用本地系统工具、读取文件和执行外部 API 的超强行动力。
+                            </BitText>
+                        </BitStack>
+                    </BitStack>
+                </BitStack>
+            </BitCard>
+        </CascadingValue>
+        <br />
+
+        <BitCard FullWidth Style="padding:3rem; background: linear-gradient(135deg, var(--bit-clr-bg-sec), transparent);">
+            <BitStack HorizontalAlign="BitAlignment.Center">
+                <BitText Typography="BitTypography.H4">跨平台无缝体验</BitText>
+                <BitText Typography="BitTypography.Body1" Align="BitTextAlign.Center" Style="max-width: 600px; margin-top: 1rem;">
+                    基于领先的 .NET 与 Blazor 技术栈，一次编写，处处运行。无论是 Web (PWA)、Windows 桌面、Android 还是 iOS 移动端，都能提供高度一致的 UI 和原生级别的性能体验。
+                </BitText>
+                <BitButton Style="margin-top: 1.5rem;" Href="/about" Variant="BitVariant.Fill">
+                    探索未来愿景
+                </BitButton>
+            </BitStack>
+        </BitCard>
+
+        <BitStack Horizontal Gap="2rem" Class="bit-products-stack" Style="margin-top: 1rem;">
+            <BitCard Style="padding:2.5rem" FullWidth>
+                <BitStack HorizontalAlign="BitAlignment.Center">
+                    <BitText Typography="BitTypography.H5">即刻开始构建</BitText>
+                    <BitText Typography="BitTypography.Body2" Align="BitTextAlign.Center" Style="color: var(--bit-clr-fg-sec); margin: 1rem 0;">
+                        告别繁琐的底层配置，专注于您的核心业务逻辑。AI.Boilerplate 已经为您准备好了身份认证、多语言、主题切换以及全面的 UI 组件库。
+                    </BitText>
+                    <BitLink Href="/dashboard" NoUnderline>
+                        <BitStack Horizontal VerticalAlign="BitAlignment.Center" Gap="0.5rem">
+                            <span>进入仪表板</span>
+                            <BitIcon Size="BitSize.Small" IconName="ChevronRight" />
+                        </BitStack>
+                    </BitLink>
+                </BitStack>
+            </BitCard>
+
+            <BitCard Style="padding:2.5rem" FullWidth>
+                <BitStack HorizontalAlign="BitAlignment.Center">
+                    <BitText Typography="BitTypography.H5">体验智能助手</BitText>
+                    <BitText Typography="BitTypography.Body2" Align="BitTextAlign.Center" Style="color: var(--bit-clr-fg-sec); margin: 1rem 0;">
+                        内置功能强大的 Chatbot，演示了如何将大语言模型与具体页面、操作指令完美结合，为您提供智能化的操作指引和内容生成服务。
+                    </BitText>
+                    <BitButton Variant="BitVariant.Outline" OnClick="() => { /* 可以在此处触发打开侧边栏聊天的逻辑，或者导航 */ }">
+                        与 AI 对话
+                    </BitButton>
+                </BitStack>
+            </BitCard>
+        </BitStack>
+    </BitStack>
+</section>

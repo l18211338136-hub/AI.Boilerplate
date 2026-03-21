@@ -1,0 +1,192 @@
+﻿<Project Sdk="Microsoft.NET.Sdk.Razor">
+
+    <PropertyGroup>
+        <TargetFrameworks>net10.0-android;net10.0-ios;net10.0-maccatalyst</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('windows'))">$(TargetFrameworks);net10.0-windows10.0.19041.0</TargetFrameworks>
+        <TargetFrameworks Condition="$([MSBuild]::IsOSPlatform('linux'))">net10.0-android</TargetFrameworks>
+        <!-- Uncomment to also build the tizen app. You will need to install tizen by following this: https://github.com/Samsung/Tizen.NET -->
+        <!-- <TargetFrameworks>$(TargetFrameworks);net10.0-tizen</TargetFrameworks> -->
+        <OutputType>Exe</OutputType>
+        <UseMaui>true</UseMaui>
+        <SingleProject>true</SingleProject>
+        <MauiXamlInflator>SourceGen</MauiXamlInflator>
+        <EnableDefaultCssItems>false</EnableDefaultCssItems>
+        
+        <!-- Display name -->
+        <ApplicationTitle>AI.Boilerplate</ApplicationTitle>
+
+        <!-- App Identifier -->
+        <ApplicationId>com.companyname.ai.boilerplate</ApplicationId>
+
+        <!-- Required for C# Hot Reload -->
+        <UseInterpreter Condition="'$(Environment)' == 'Development'">True</UseInterpreter>
+        <SkipStaticLibraryValidation Condition="'$(Environment)' == 'Development'">true</SkipStaticLibraryValidation>
+
+        <NoWarn>$(NoWarn);ClassWithoutModifierAnalyzer</NoWarn>
+
+        <ResolveStaticWebAssetsInputsDependsOn>
+            BeforeBuildTasks;
+            $(ResolveStaticWebAssetsInputsDependsOn)
+        </ResolveStaticWebAssetsInputsDependsOn>
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <CompressionEnabled>false</CompressionEnabled>
+        <!-- Enabling compression generates `.br` and `.gz` files for static assets.
+        While this is beneficial for Blazor WebAssembly, it only adds to the app bundle size in MAUI without offering any advantages. -->
+    </PropertyGroup>
+
+    <PropertyGroup>
+        <!-- Android requires a unique, increasing integer for `versionCode`. We derive it from Version (e.g., '1.0' or '1.0.0') by extracting major, minor, and patch numbers, setting patch to 0 if absent, and calculating versionCode as major*10000 + minor*100 + patch (e.g., '1.0' becomes 10000, '1.0.1' becomes 10001). -->
+        <_MajorVersionString>$([System.Text.RegularExpressions.Regex]::Match($(Version), '^(\d+)').Groups[1].Value)</_MajorVersionString>
+        <_MinorVersionString>$([System.Text.RegularExpressions.Regex]::Match($(Version), '^\d+\.(\d+)').Groups[1].Value)</_MinorVersionString>
+        <_PatchVersionString>$([System.Text.RegularExpressions.Regex]::Match($(Version), '^\d+\.\d+\.(\d+)$').Groups[1].Value)</_PatchVersionString>
+
+        <MajorVersion>$([System.Int32]::Parse($(_MajorVersionString)))</MajorVersion>
+        <MinorVersion>$([System.Int32]::Parse($(_MinorVersionString)))</MinorVersion>
+
+        <_PatchVersionString Condition="'$(_PatchVersionString)' == ''">0</_PatchVersionString>
+        <PatchVersion>$([System.Int32]::Parse($(_PatchVersionString)))</PatchVersion>
+
+        <ApplicationVersion>
+            $([MSBuild]::Add(
+                $([MSBuild]::Add(
+                    $([MSBuild]::Multiply($(MajorVersion), 10000)),
+                    $([MSBuild]::Multiply($(MinorVersion), 100))
+                )),
+                $(PatchVersion)
+            ))
+        </ApplicationVersion>
+        <ApplicationVersion>$(ApplicationVersion.Trim())</ApplicationVersion>
+    </PropertyGroup>
+    
+    <PropertyGroup Condition="$(TargetFramework.Contains('-android')) and '$(Environment)' != 'Development'">
+        <AndroidLinkTool>r8</AndroidLinkTool>
+        <AndroidUseAapt2>True</AndroidUseAapt2>
+        <RunAOTCompilation>True</RunAOTCompilation>
+        <AndroidStripILAfterAOT>true</AndroidStripILAfterAOT>
+        <AndroidEnableProfiledAot>true</AndroidEnableProfiledAot>
+        <MauiUseDefaultAotProfile Condition="Exists('custom.aprof')">false</MauiUseDefaultAotProfile>
+        <RuntimeIdentifiers Condition="'$(AndroidPackageFormat)' == 'apk'">android-arm64</RuntimeIdentifiers>
+
+        <EnableLLVM>false</EnableLLVM>
+        <!-- https://github.com/dotnet/runtime/issues/95406#issuecomment-1983736335 -->
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(TargetFramework.Contains('-ios')) and '$(Environment)' == 'Development'">
+        <EnableSGenConc>True</EnableSGenConc>
+        <CodesignEntitlements>Platforms/iOS/Entitlements.Development.plist</CodesignEntitlements>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(TargetFramework.Contains('-ios')) and '$(Environment)' != 'Development'">
+        <EnableSGenConc>True</EnableSGenConc>
+        <!-- https://learn.microsoft.com/en-us/dotnet/maui/macios/interpreter -->
+        <MtouchInterpreter>-all</MtouchInterpreter>
+        <CodesignEntitlements>Platforms/iOS/Entitlements.Production.plist</CodesignEntitlements>
+    </PropertyGroup>
+
+    <!-- Build Properties must be defined within these property groups to ensure successful publishing
+       to the Mac App Store. See: https://aka.ms/maui-publish-app-store#define-build-properties-in-your-project-file -->
+    <PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst')) and '$(Environment)' == 'Development'">
+        <CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Development.plist</CodesignEntitlements>
+    </PropertyGroup>
+
+    <PropertyGroup Condition="$(TargetFramework.Contains('-maccatalyst')) and '$(Environment)' != 'Development'">
+        <CodesignEntitlements>Platforms/MacCatalyst/Entitlements.Production.plist</CodesignEntitlements>
+        <UseHardenedRuntime>true</UseHardenedRuntime>
+        <!-- https://learn.microsoft.com/en-us/dotnet/maui/macios/interpreter -->
+        <MtouchInterpreter>-all</MtouchInterpreter>
+    </PropertyGroup>
+
+    <ItemGroup Condition="$(TargetFramework.Contains('-android'))">
+        <AndroidResource Include="Platforms\Android\Resources\**\styles.xml" />
+        <GoogleServicesJson Condition="Exists('Platforms\Android\google-services.json')" Include="Platforms\Android\google-services.json" />
+        <AndroidAotProfile Condition="Exists('custom.aprof')" Include="custom.aprof" />
+                <PackageReference Include="Xamarin.Firebase.Messaging" />
+                <!-- Run the following commands to create custom.aprof file which improves the Android app performance -->
+        <!-- dotnet add package Mono.AotProfiler.Android -->
+        <!-- dotnet build -t:BuildAndStartAotProfiling -f net10.0-android -p:UseInterpreter=false -->
+        <!-- dotnet build -t:FinishAotProfiling -f net10.0-android -->
+        <!-- dotnet remove package Mono.AotProfiler.Android -->
+    </ItemGroup>
+
+    <ItemGroup Condition="$(TargetFramework.Contains('-ios'))">
+        <BundleResource Include="Platforms\iOS\PrivacyInfo.xcprivacy" LogicalName="PrivacyInfo.xcprivacy" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <Content Include="..\AI.Boilerplate.Client.Web\wwwroot\web-interop-app.html" Link="wwwroot\web-interop-app.html">
+            <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+        </Content>
+        
+        <Using Include="Microsoft.AspNetCore.Components.WebView.Maui" />
+        <Using Include="AI.Boilerplate.Client.Core.Components.Pages" />
+        <Using Include="AI.Boilerplate.Client.Core.Components.Layout" />
+        <Using Include="AI.Boilerplate.Shared" />
+        <Using Include="AI.Boilerplate.Client.Core.Infrastructure.Services" />
+        <Using Include="AI.Boilerplate.Client.Core.Infrastructure.Services.Contracts" />
+    </ItemGroup>
+
+    <ItemGroup>
+
+        <!-- App icon for all platforms -->
+        <MauiIcon Include="Resources\AppIcon\appicon.svg" Color="#0065EF" />
+
+        <!-- Customize App icon for Android -->
+        <MauiIcon Condition="$(TargetFramework.Contains('-android'))" Update="Resources\AppIcon\appicon.svg" Color="#0065EF" ForegroundScale="0.68" />
+
+        <!-- Splash Screen -->
+        <MauiSplashScreen Include="Resources\Splash\splash.svg" Color="#0D2960" BaseSize="128,128" />
+
+        <!-- Images -->
+        <MauiImage Include="Resources\Images\*" />
+
+        <!-- Fonts -->
+        <MauiFont Include="Resources\Fonts\*" />
+
+        <!-- Raw Assets (also remove the "Resources\Raw" prefix) -->
+        <MauiAsset Include="Resources\Raw\**" LogicalName="%(RecursiveDir)%(Filename)%(Extension)" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <Content Remove="appsettings*.json" />
+        <EmbeddedResource Include="appsettings*.json" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <ProjectReference Include="..\AI.Boilerplate.Client.Core\AI.Boilerplate.Client.Core.csproj" />
+    </ItemGroup>
+
+    <ItemGroup>
+        <PackageReference Include="EmbedIO" />
+        <PackageReference Include="Bit.BlazorES2019" />
+        <PackageReference Include="Microsoft.Maui.Controls" />
+        <PackageReference Include="Microsoft.AspNetCore.Components.WebView.Maui" />
+        <PackageReference Include="Microsoft.Extensions.Logging.EventLog" />
+        <PackageReference Include="Microsoft.Extensions.Logging.EventSource" />
+        <PackageReference Include="Oscore.Maui.AppStoreInfo" />
+        <PackageReference Include="Plugin.Maui.AppRating" />
+                <PackageReference Include="Newtonsoft.Json" />
+        <PackageReference Include="Sentry.Maui" />
+        <PackageReference Include="Azure.Monitor.OpenTelemetry.Exporter" />
+        <PackageReference Include="Plugin.LocalNotification" />
+            </ItemGroup>
+
+    <Target Name="BeforeBuildTasks" AfterTargets="CoreCompile">
+        <Error Text="Enable long paths in Windows. https://learn.microsoft.com/en-us/windows/win32/fileio/maximum-file-path-limitation?tabs=powershell#enable-long-paths-in-windows-10-version-1607-and-later" Condition=" $([MSBuild]::IsOSPlatform('windows')) AND $([MSBuild]::GetRegistryValueFromView('HKEY_LOCAL_MACHINE\SYSTEM\CurrentControlSet\Control\FileSystem', 'LongPathsEnabled', null, RegistryView.Registry64)) != '1' " />
+        <CallTarget Targets="BuildCssFiles" />
+    </Target>
+
+    <Target Name="BuildCssFiles">
+        <Exec Command="../AI.Boilerplate.Client.Core/node_modules/.bin/sass Components:Components --style compressed --silence-deprecation=import --update --color" StandardOutputImportance="high" StandardErrorImportance="high" LogStandardErrorAsError="true" />
+    </Target>
+
+    <!-- https://github.com/dotnet/runtime/issues/104599  -->
+    <Target Name="_FixAndroidAotInputs" DependsOnTargets="_AndroidAotInputs" BeforeTargets="_AndroidAotCompilation">
+        <ItemGroup Condition="$(EnableLLVM)">
+            <_AndroidAotInputs Remove="$(IntermediateLinkDir)**\System.Net.Sockets.dll" />
+        </ItemGroup>
+    </Target>
+
+</Project>

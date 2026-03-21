@@ -1,0 +1,57 @@
+@attribute [Route(PageUrls.About)]
+@attribute [Route("{culture?}" + PageUrls.About)]
+@attribute [AppResponseCache(SharedMaxAge = 3600 * 24 * 7, MaxAge = 60 * 5)]
+@inherits AppPageBase
+
+<AppPageData Title="@Localizer[nameof(AppStrings.About)]"
+             PageTitle="@Localizer[nameof(AppStrings.AboutPageTitle)]" />
+
+<CascadingValue Value=BitDir.Ltr>
+    <section>
+        <BitStack Gap="3rem">
+            <BitCard FullSize>
+                <BitText Typography="BitTypography.H3" Style="margin-bottom: 1rem; color: var(--bit-clr-fg-primary);">关于 AI.Boilerplate</BitText>
+                
+                <BitText Typography="BitTypography.Body1" Style="line-height: 1.6; margin-bottom: 1.5rem;">
+                    <b>AI.Boilerplate</b> 是一款面向未来的全栈现代化应用程序框架。我们不仅仅是提供一个跨平台的开发模板，更致力于将前沿的人工智能技术深度融合到日常软件开发与业务场景中。
+                </BitText>
+
+                <BitText Typography="BitTypography.H5" Style="margin-bottom: 0.5rem; font-weight: 600;">🚀 系统核心特色</BitText>
+                <ul style="line-height: 1.8; margin-bottom: 1.5rem; padding-left: 1.5rem;">
+                    <li>
+                        <b>本地化 AI 部署：</b> 深度集成 <b>Ollama</b> 等本地模型运行环境，让您能够在企业内网或个人设备上流畅运行强大的大语言模型（LLM），彻底告别数据隐私焦虑和网络延迟。
+                    </li>
+                    <li>
+                        <b>增强上下文感知 (RAG)：</b> 内置向量数据库 (Vector Database) 支持，使得系统具备强大的文档解析、长文本记忆和知识检索能力，为您的专属数据插上 AI 的翅膀。
+                    </li>
+                    <li>
+                        <b>模型上下文协议 (MCP)：</b> 引入最新的 MCP (Model Context Protocol) 架构，使得 AI 助手能够安全、标准化地访问外部系统、文件和 API 工具，将 AI 从“聊天机器人”升级为“执行专家”。
+                    </li>
+                    <li>
+                        <b>跨平台无缝体验：</b> 基于 .NET 和 Blazor 技术栈，只需编写一次代码，即可生成高性能的 Web (PWA)、Windows 桌面端、Android 及 iOS 移动应用。
+                    </li>
+                </ul>
+
+                <BitText Typography="BitTypography.H5" Style="margin-bottom: 0.5rem; font-weight: 600;">🌟 未来的发展愿景</BitText>
+                <BitText Typography="BitTypography.Body1" Style="line-height: 1.6; margin-bottom: 1.5rem;">
+                    我们的愿景是打造一个<b>高度自治且极具扩展性的 AI 协作平台</b>。未来，我们将：
+                    <br />
+                    - 引入更丰富的多模态 AI 能力（视觉、语音处理等本地化集成）。<br />
+                    - 构建基于 Agent（智能体）的自动化工作流系统，让 AI 协助处理复杂的企业级审批和数据分析任务。<br />
+                    - 优化边缘计算体验，让移动设备也能运行量化版的高效模型。<br />
+                    - 建立完整的 MCP 插件生态，一键接入各种流行的 SaaS 服务。
+                </BitText>
+
+                <BitText Typography="BitTypography.H6" Style="margin-bottom: 0.5rem; border-top: 1px solid var(--bit-clr-bg-sec); padding-top: 1rem;">⚙️ 运行环境信息</BitText>
+                <BitStack AutoWidth Style="background: var(--bit-clr-bg-sec); padding: 1rem; border-radius: 8px;">
+                    <BitText>应用名称: <b>@appName</b></BitText>
+                    <BitText>应用版本: <b>@appVersion</b></BitText>
+                    <BitText>操作系统: <b>@platform</b></BitText>
+                    <BitText>设备制造商: <b>@oem</b></BitText>
+                    <BitText>运行环境: <b>@AppEnvironment.Current</b></BitText>
+                    <BitText>进程 ID: <b>@processId</b></BitText>
+                </BitStack>
+            </BitCard>
+        </BitStack>
+    </section>
+</CascadingValue>
