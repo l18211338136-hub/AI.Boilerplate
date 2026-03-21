@@ -112,6 +112,8 @@ public partial class AppChatbot
         StringBuilder assistantResponse = new();
         try
         {
+            Console.WriteLine($"\n[User]: {incomingMessage}"); // Print user message to console
+            Console.Write("[AI]: "); // Prefix for AI response
             chatMessages.Add(new(ChatRole.User, incomingMessage));
 
             var chatOptions = CreateChatOptions();
@@ -137,9 +139,11 @@ public partial class AppChatbot
                     break;
 
                 var result = response.Text;
+                Console.Write(result); // Print AI response to console
                 assistantResponse.Append(result);
                 await responseChannel.Writer.WriteAsync(result, cancellationToken);
             }
+            Console.WriteLine(); // Add a new line after the response is complete
 
             await responseChannel.Writer.WriteAsync(SharedAppMessages.MESSAGE_PROCESS_SUCCESS, cancellationToken);
 

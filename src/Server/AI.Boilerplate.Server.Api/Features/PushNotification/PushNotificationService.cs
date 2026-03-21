@@ -1,4 +1,4 @@
-﻿using AdsPush.Vapid;
+using AdsPush.Vapid;
 using System.Linq.Expressions;
 
 namespace AI.Boilerplate.Server.Api.Features.PushNotification;
@@ -16,16 +16,26 @@ public partial class PushNotificationService
 
         var userSessionId = httpContextAccessor.HttpContext!.User.IsAuthenticated() ? httpContextAccessor.HttpContext.User.GetSessionId() : (Guid?)null;
 
-        var subscription = await dbContext.PushNotificationSubscriptions
+        var subscriptions = await dbContext.PushNotificationSubscriptions
             .WhereIf(userSessionId is null, s => s.DeviceId == dto.DeviceId)
             .WhereIf(userSessionId is not null, s => s.UserSessionId == userSessionId || s.DeviceId == dto.DeviceId) // pushManager's subscription has been renewed.
-            .FirstOrDefaultAsync(cancellationToken) ??
+            .ToListAsync(cancellationToken);
 
-            (await dbContext.PushNotificationSubscriptions.AddAsync(new()
+        var subscription = subscriptions.FirstOrDefault(s => s.DeviceId == dto.DeviceId);
+
+        if (subscription is null)
+        {
+            subscription = (await dbContext.PushNotificationSubscriptions.AddAsync(new()
             {
                 DeviceId = dto.DeviceId,
                 Platform = dto.Platform
             }, cancellationToken)).Entity;
+        }
+
+        foreach (var otherSub in subscriptions.Where(s => s != subscription && s.UserSessionId == userSessionId))
+        {
+            otherSub.UserSessionId = null;
+        }
 
         dto.Patch(subscription);
 
