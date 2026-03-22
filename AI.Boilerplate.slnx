@@ -25,10 +25,6 @@
     <File Path=".github/prompts/resx.prompt.md" />
     <File Path=".github/prompts/bitify.prompt.md" />
     <File Path=".github/prompts/scaffold.prompt.md" />
-    <File Path="D:/Downloads/bitify.agent.md" />
-    <File Path="D:/Github/bitplatform/src/Templates/Boilerplate/Bit.Boilerplate/.github/prompts/bitify.prompt.md" />
-    <File Path="D:/Github/bitplatform/src/Templates/Boilerplate/Bit.Boilerplate/.github/prompts/resx.prompt.md" />
-    <File Path="D:/Github/bitplatform/src/Templates/Boilerplate/Bit.Boilerplate/.github/prompts/scaffold.prompt.md" />
   </Folder>
   <Folder Name="/.SolutionItems/.docs/">
     <File Path=".docs/00- Wiki.md" />
