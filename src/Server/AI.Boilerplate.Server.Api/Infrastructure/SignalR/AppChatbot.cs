@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Threading.Channels;
 using AI.Boilerplate.Shared.Features.Chatbot;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -31,6 +31,7 @@ public partial class AppChatbot
     private string? variablesDefault;
     private string? supportSystemPrompt;
     private string? signalRConnectionId;
+    private Guid? currentUserId;
     private List<ChatMessage> chatMessages = [];
 
     /// <summary>
@@ -77,6 +78,7 @@ public partial class AppChatbot
 ";
 
         this.signalRConnectionId = signalRConnectionId;
+        currentUserId = null;
     }
 
     /// <summary>
@@ -115,6 +117,7 @@ public partial class AppChatbot
             Console.WriteLine($"\n[User]: {incomingMessage}"); // Print user message to console
             Console.Write("[AI]: "); // Prefix for AI response
             chatMessages.Add(new(ChatRole.User, incomingMessage));
+            currentUserId = user.IsAuthenticated() ? user!.GetUserId() : null;
 
             var chatOptions = CreateChatOptions();
 
@@ -185,6 +188,11 @@ public partial class AppChatbot
             AIFunctionFactory.Create(SetTheme),
             AIFunctionFactory.Create(CheckLastError),
             AIFunctionFactory.Create(ClearAppFiles),
+            AIFunctionFactory.Create(AddTodoItem),
+            AIFunctionFactory.Create(UpdateTodoItem),
+            AIFunctionFactory.Create(CompleteTodoItem),
+            AIFunctionFactory.Create(DeleteTodoItem),
+            AIFunctionFactory.Create(GetTodoItems),
         };
 
         var chatOptions = new ChatOptions { Tools = [.. tools] };

@@ -1,10 +1,11 @@
-﻿using AI.Boilerplate.Shared.Features.Todo;
+using AI.Boilerplate.Shared.Features.Todo;
 
 namespace AI.Boilerplate.Client.Core.Components.Pages;
 
 public partial class TodoPage
 {
     [AutoInject] ITodoItemController todoItemController = default!;
+    [AutoInject] private ILogger<TodoPage> logger = default!;
 
     // Refer to .docs/09- Dependency Injection & Service Registration.md 's Owned services section for more information about ScopedServices
     Keyboard keyboard => field ??= ScopedServices.GetRequiredService<Keyboard>();
@@ -17,6 +18,9 @@ public partial class TodoPage
     private bool isDeleteDialogOpen;
     private TodoItemDto? deletingTodoItem;
     private string? underEditTodoItemTitle;
+    private bool isRefreshingFromNotification;
+    private Action? unsubscribeTodoItemsChanged;
+    private CancellationTokenSource? refreshDebounceCts;
     private BitSearchBox searchBox = default!;
     private string newTodoTitle = string.Empty;
     private List<TodoItemDto> allTodoItems = [];
@@ -29,6 +33,7 @@ public partial class TodoPage
 
         selectedFilter = nameof(AppStrings.All);
         selectedSort = nameof(AppStrings.Alphabetical);
+        unsubscribeTodoItemsChanged = PubSubService.Subscribe(SharedAppMessages.TODO_ITEMS_CHANGED, HandleTodoItemsChangedAsync);
 
         await LoadTodoItems();
     }
@@ -189,6 +194,45 @@ public partial class TodoPage
         if (TodoItemIsVisible(todoItem) is false)
         {
             viewTodoItems.Remove(todoItem);
+        }
+    }
+
+    protected override async ValueTask DisposeAsync(bool disposing)
+    {
+        refreshDebounceCts?.Cancel();
+        refreshDebounceCts?.Dispose();
+        unsubscribeTodoItemsChanged?.Invoke();
+        await base.DisposeAsync(disposing);
+    }
+
+    private async Task HandleTodoItemsChangedAsync(object? _)
+    {
+        refreshDebounceCts?.Cancel();
+        refreshDebounceCts?.Dispose();
+        refreshDebounceCts = new CancellationTokenSource();
+        var ct = refreshDebounceCts.Token;
+
+        try
+        {
+            await Task.Delay(150, ct);
+        }
+        catch (OperationCanceledException)
+        {
+            return;
+        }
+
+        if (isRefreshingFromNotification) return;
+
+        isRefreshingFromNotification = true;
+        try
+        {
+            logger.LogDebug("Refreshing todo list from TODO_ITEMS_CHANGED message.");
+            await LoadTodoItems(false);
+            await InvokeAsync(StateHasChanged);
+        }
+        finally
+        {
+            isRefreshingFromNotification = false;
         }
     }
 }

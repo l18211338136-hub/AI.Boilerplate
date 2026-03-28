@@ -1,4 +1,4 @@
-﻿namespace AI.Boilerplate.Shared.Infrastructure.Services;
+namespace AI.Boilerplate.Shared.Infrastructure.Services;
 
 /// <summary>
 /// This class is located in the Shared project to define
@@ -68,6 +68,11 @@ public partial class SharedAppMessages
     /// A publisher that sends this message announces that dashboard data has changed and subscribers should refresh their dashboard views.
     /// </summary>
     public const string DASHBOARD_DATA_CHANGED = nameof(DASHBOARD_DATA_CHANGED);
+
+    /// <summary>
+    /// A publisher that sends this message announces that todo items have changed and subscribers should refresh their todo views.
+    /// </summary>
+    public const string TODO_ITEMS_CHANGED = nameof(TODO_ITEMS_CHANGED);
 
     /// <summary>
     /// A publisher that sends this message announces that the subscriber's user's session has been revoked.

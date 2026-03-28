@@ -1,10 +1,12 @@
-using System.ComponentModel;
+﻿using System.ComponentModel;
 using ModelContextProtocol.Server;
 using Microsoft.AspNetCore.SignalR;
 using AI.Boilerplate.Shared.Features.Diagnostic;
 using AI.Boilerplate.Server.Api.Features.Identity;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
+using AI.Boilerplate.Server.Api.Features.Todo;
+using AI.Boilerplate.Shared.Features.Todo;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 
@@ -239,6 +241,190 @@ public partial class AppChatbot
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
             return "Failed to clear app files on the device.";
         }
+    }
+
+    [Description("添加一个新的待办事项。")]
+    [McpServerTool(Name = nameof(AddTodoItem))]
+    private async Task<TodoItemDto?> AddTodoItem(
+        [Required, Description("待办标题")] string title)
+    {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(AddTodoItem)} (title: {title})");
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        try
+        {
+            var userId = await EnsureCurrentUserIdIsPresent();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var entity = new TodoItem
+            {
+                Id = Guid.CreateVersion7().ToString(),
+                Title = title,
+                IsDone = false,
+                UserId = userId,
+                UpdatedAt = DateTimeOffset.UtcNow
+            };
+
+            entity.Id ??= Guid.CreateVersion7().ToString();
+
+            await db.TodoItems.AddAsync(entity, CancellationToken.None);
+            await db.SaveChangesAsync(CancellationToken.None);
+            await NotifyTodoItemsChanged();
+
+            return entity.Map();
+        }
+        catch (Exception exp)
+        {
+            serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
+            return null;
+        }
+    }
+
+    [Description("按原标题更新待办事项。可以修改标题、完成状态，或同时修改二者。")]
+    [McpServerTool(Name = nameof(UpdateTodoItem))]
+    private async Task<string?> UpdateTodoItem(
+        [Required, Description("原待办标题（精确匹配）")] string currentTitle,
+        [Description("新的待办标题")] string? newTitle = null,
+        [Description("新的完成状态，true为已完成，false为进行中")] bool? isDone = null)
+    {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(UpdateTodoItem)} (currentTitle: {currentTitle}, newTitle: {newTitle}, isDone: {isDone})");
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        try
+        {
+            if (newTitle is null && isDone is null)
+                return "No changes provided. Please specify newTitle or isDone.";
+
+            var userId = await EnsureCurrentUserIdIsPresent();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var entity = await db.TodoItems
+                .Where(t => t.UserId == userId && t.Title == currentTitle)
+                .OrderByDescending(t => t.UpdatedAt)
+                .FirstOrDefaultAsync(CancellationToken.None)
+                ?? throw new ResourceNotFoundException("Todo item not found.");
+
+            if (newTitle is not null)
+                entity.Title = newTitle;
+            if (isDone is not null)
+                entity.IsDone = isDone.Value;
+
+            entity.UpdatedAt = DateTimeOffset.UtcNow;
+            await db.SaveChangesAsync(CancellationToken.None);
+            await NotifyTodoItemsChanged();
+
+            return $"Todo item updated successfully. title: {entity.Title}, isDone: {entity.IsDone}";
+        }
+        catch (Exception exp)
+        {
+            serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
+            return "Failed to update todo item.";
+        }
+    }
+
+    [Description("将指定标题的待办标记为已完成。")]
+    [McpServerTool(Name = nameof(CompleteTodoItem))]
+    private async Task<string?> CompleteTodoItem(
+    [Required, Description("待办标题（精确匹配）")] string title)
+    {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(CompleteTodoItem)} (title: {title})");
+        return await UpdateTodoItem(title, null, true);
+    }
+
+    [Description("删除指定的待办事项。")]
+    [McpServerTool(Name = nameof(DeleteTodoItem))]
+    private async Task<string?> DeleteTodoItem(
+        [Required, Description("待办标题")] string title)
+    {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(DeleteTodoItem)} (title: {title})");
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        try
+        {
+            var userId = await EnsureCurrentUserIdIsPresent();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var entity = await db.TodoItems
+                .FirstOrDefaultAsync(t => t.Title == title && t.UserId == userId, CancellationToken.None)
+                ?? throw new ResourceNotFoundException("Todo item not found.");
+
+            db.TodoItems.Remove(entity);
+            await db.SaveChangesAsync(CancellationToken.None);
+            await NotifyTodoItemsChanged();
+            return "Todo item deleted successfully.";
+        }
+        catch (Exception exp)
+        {
+            serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
+            return "Failed to delete todo item.";
+        }
+    }
+
+    [Description("查询待办事项。支持全部(all)、正在进行(in_progress)和已完成(completed)。")]
+    [McpServerTool(Name = nameof(GetTodoItems))]
+    private async Task<TodoItemDto[]> GetTodoItems(
+        [Required, Description("查询类型：all、in_progress、completed")] string status)
+    {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(GetTodoItems)} (status: {status})");
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        try
+        {
+            var userId = await EnsureCurrentUserIdIsPresent();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+
+            var normalizedStatus = status.Trim().ToLowerInvariant();
+
+            var query = db.TodoItems
+                .Where(t => t.UserId == userId);
+
+            query = normalizedStatus switch
+            {
+                "all" => query,
+                "in_progress" => query.Where(t => t.IsDone == false),
+                "completed" => query.Where(t => t.IsDone),
+                _ => throw new ValidationException("Invalid status. Use all, in_progress, or completed.")
+            };
+
+            var result = await query
+                .OrderByDescending(t => t.UpdatedAt)
+                .Project()
+                .ToArrayAsync(CancellationToken.None);
+            return result;
+        }
+        catch (Exception exp)
+        {
+            serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
+            return [];
+        }
+    }
+
+    private async Task NotifyTodoItemsChanged()
+    {
+        await EnsureSignalRConnectionIdIsPresent();
+
+        await using var scope = serviceProvider.CreateAsyncScope();
+        await scope.ServiceProvider.GetRequiredService<IHubContext<AppHub>>()
+            .Clients.Client(signalRConnectionId!)
+            .Publish(SharedAppMessages.TODO_ITEMS_CHANGED, CancellationToken.None);
+    }
+
+    private async Task<Guid> EnsureCurrentUserIdIsPresent()
+    {
+        await using var scope = serviceProvider.CreateAsyncScope();
+        var httpContextAccessor = scope.ServiceProvider.GetService<IHttpContextAccessor>();
+        var authenticatedHttpUser = httpContextAccessor?.HttpContext?.User;
+
+        if (authenticatedHttpUser?.IsAuthenticated() is true)
+        {
+            currentUserId = authenticatedHttpUser.GetUserId();
+            return currentUserId.Value;
+        }
+
+        if (currentUserId is not null)
+            return currentUserId.Value;
+
+        throw new UnauthorizedException("User must be authenticated to manage todo items.");
     }
 
 }
