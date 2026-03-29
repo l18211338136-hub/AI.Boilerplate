@@ -738,7 +738,7 @@ public partial class AppChatbot
         }
     }
 
-    [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。")]
+    [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。拿到执行结果后，你必须将执行结果的所有列和数据原样使用 markdown 表格展示给用户，并将表格的列名（表头）翻译为易懂的中文。绝对不要擅自总结、解释、截断或遗漏数据行。不要输出其他多余的自然语言。")]
     [McpServerTool(Name = nameof(PgTextToSqlReport))]
     private async Task<string> PgTextToSqlReport(
         [Required, Description("报表需求自然语言描述，例如：统计近30天各分类产品数量")] string reportRequirement,
@@ -749,12 +749,12 @@ public partial class AppChatbot
 
         try
         {
-            _ = await EnsureCurrentUserIdIsPresent();
+            var userId = await EnsureCurrentUserIdIsPresent();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
             var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
 
-            var firstSql = await GenerateTextToSqlAsync(reportRequirement, schemaSummary, null, CancellationToken.None);
+            var firstSql = await GenerateTextToSqlAsync(reportRequirement, schemaSummary, userId, null, CancellationToken.None);
 
             try
             {
@@ -769,7 +769,7 @@ public partial class AppChatbot
             }
             catch (Exception firstExp)
             {
-                var secondSql = await GenerateTextToSqlAsync(reportRequirement, schemaSummary, firstExp.Message, CancellationToken.None);
+                var secondSql = await GenerateTextToSqlAsync(reportRequirement, schemaSummary, userId, firstExp.Message, CancellationToken.None);
                 var secondResult = await ExecuteReportQueryAsync(connection, secondSql, limit, CancellationToken.None);
 
                 return JsonSerializer.Serialize(new
@@ -789,7 +789,7 @@ public partial class AppChatbot
         }
     }
 
-    [Description("将自然语言数据变更需求转换为 SQL 并执行（INSERT/UPDATE/DELETE）。")]
+    [Description("将自然语言数据变更需求转换为 SQL 并执行（INSERT/UPDATE/DELETE）。请将执行结果反馈给用户。")]
     [McpServerTool(Name = nameof(PgTextToSqlWrite))]
     private async Task<string> PgTextToSqlWrite(
         [Required, Description("自然语言数据变更需求，例如：把标题为A的任务标记完成")] string writeRequirement,
@@ -800,14 +800,14 @@ public partial class AppChatbot
 
         try
         {
-            _ = await EnsureCurrentUserIdIsPresent();
+            var userId = await EnsureCurrentUserIdIsPresent();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
             var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
             var accessibleTables = await LoadAccessibleTablesAsync(connection, CancellationToken.None);
             var safeMaxAffectedRows = Math.Clamp(maxAffectedRows, 1, 200);
 
-            var firstSql = await GenerateTextToWriteSqlAsync(writeRequirement, schemaSummary, null, CancellationToken.None);
+            var firstSql = await GenerateTextToWriteSqlAsync(writeRequirement, schemaSummary, userId, null, CancellationToken.None);
 
             try
             {
@@ -822,7 +822,7 @@ public partial class AppChatbot
             }
             catch (Exception firstExp)
             {
-                var secondSql = await GenerateTextToWriteSqlAsync(writeRequirement, schemaSummary, firstExp.Message, CancellationToken.None);
+                var secondSql = await GenerateTextToWriteSqlAsync(writeRequirement, schemaSummary, userId, firstExp.Message, CancellationToken.None);
                 var secondResult = await ExecuteWriteSqlAsync(connection, secondSql, safeMaxAffectedRows, accessibleTables, CancellationToken.None);
                 return JsonSerializer.Serialize(new
                 {
@@ -1037,6 +1037,7 @@ public partial class AppChatbot
     private async Task<string> GenerateTextToSqlAsync(
         string reportRequirement,
         string schemaSummary,
+        Guid currentUserId,
         string? previousError,
         CancellationToken cancellationToken)
     {
@@ -1052,9 +1053,13 @@ public partial class AppChatbot
             1) 只允许 SELECT 或 WITH 开头语句；
             2) 只生成一条 SQL，不允许分号分隔多语句；
             3) 禁止 INSERT/UPDATE/DELETE/DDL；
-            4) 优先使用明确字段，不要 SELECT *（除非用户明确要求）；
-            5) 表名/字段名严格来自 schema；
-            6) 如果需求不清晰，做最保守可执行推断。
+            4) 如果表中有比较耗时的字段（如大文本 DescriptionHTML, 向量 Embedding 等），请绝对不要使用 SELECT *，必须明确指定需要查询的核心字段（如主键、名称、状态、日期等）。仅当表结构简单且无大文本字段时，才可使用 SELECT *。
+            5) 表名和字段名必须严格来自 schema，绝对不要凭空捏造或联想不存在的字段。如果要查询的字段不在主表中，必须通过 JOIN 关联；如果用户条件涉及的字段在当前查询的表中不存在，绝对不要将该条件强加到该表上，直接忽略该条件或寻找合理的替代方案。
+            6) 如果需求不清晰，做最保守可执行推断；
+            7) 所有的表名和列名（包括 SELECT 列表、WHERE 条件、GROUP BY 和 ORDER BY 中的列名）都必须使用双引号包裹，以保证大小写精确匹配。当使用表别名时，表别名不要加双引号，但列名必须加双引号，格式为：别名."列名"（例如：SELECT p."Id", c."Name" FROM "public"."Products" p JOIN "public"."Categories" c ON p."CategoryId" = c."Id" WHERE p."IsDone" = true）。绝对不要使用未带双引号的列名，也不要将别名和列名一起放在一个双引号内（如 "p.Id" 是错误的，必须是 p."Id"）。
+            8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译。
+            9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请绝对不要在 WHERE 条件中加入 UserId 的过滤！
+            10) 严禁在 WHERE 子句中使用窗口函数（如 ROW_NUMBER() OVER ()）。PostgreSQL 不允许在 WHERE 中直接使用窗口函数。如果需要限制行数，请使用 LIMIT 关键字；如果需要基于排序限制，请使用 ORDER BY 结合 LIMIT，或者使用子查询。
 
             输出格式：
             仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
@@ -1073,6 +1078,8 @@ public partial class AppChatbot
         configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
 
         var prompt = $"""
+            当前用户的 UserId 为：{currentUserId}
+
             用户报表需求：
             {reportRequirement}
 
@@ -1100,12 +1107,14 @@ public partial class AppChatbot
         if (string.IsNullOrWhiteSpace(sql))
             throw new ValidationException("Text-to-SQL model returned empty SQL.");
 
+        Console.WriteLine($"\n[Generated SQL]: {sql}");
         return sql!;
     }
 
     private async Task<string> GenerateTextToWriteSqlAsync(
         string writeRequirement,
         string schemaSummary,
+        Guid currentUserId,
         string? previousError,
         CancellationToken cancellationToken)
     {
@@ -1122,10 +1131,11 @@ public partial class AppChatbot
             2) 只生成一条 SQL，不允许分号分隔多语句；
             3) 严禁 DDL（CREATE/ALTER/DROP/TRUNCATE 等）；
             4) UPDATE/DELETE 必须带 WHERE；
-            5) 表名/字段名严格来自 schema；
+            5) 表名和字段名严格来自 schema。如果用户指令中包含在当前表 schema 中不存在的字段（如尝试按 UserId 更新但表里没有 UserId），请绝对不要将该字段加入 SQL 中，直接忽略该无效条件。
             6) 若需求不清晰，做最保守的精确变更，不做全表操作。
-            7) 必须使用 schema 中给出的精确大小写和双引号表名（例如："public"."Categories"）。
+            7) 所有的表名和列名（包括 INSERT 列表、UPDATE SET 列表和 WHERE 条件中的列名）都必须使用双引号包裹，以保证大小写精确匹配（例如：UPDATE "public"."TodoItems" SET "IsDone" = true WHERE "Id" = '...'）。不要使用未带双引号的标识符。
             8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译（例如“劳斯莱斯”不能改成其他名称）。
+            9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请不要在 WHERE 条件中加入 UserId 的过滤！
 
             输出格式：
             仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
@@ -1144,6 +1154,8 @@ public partial class AppChatbot
         configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
 
         var prompt = $"""
+            当前用户的 UserId 为：{currentUserId}
+
             用户写入需求：
             {writeRequirement}
 
@@ -1171,6 +1183,7 @@ public partial class AppChatbot
         if (string.IsNullOrWhiteSpace(sql))
             throw new ValidationException("Text-to-SQL model returned empty SQL.");
 
+        Console.WriteLine($"\n[Generated SQL]: {sql}");
         return sql!;
     }
 
@@ -1450,7 +1463,7 @@ public partial class AppChatbot
             return sql;
 
         var match = Regex.Match(sql,
-            @"\bINSERT\s+INTO\s+(?<table>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))\s*\((?<cols>[^)]*)\)\s*VALUES\s*\((?<vals>[^)]*)\)",
+            @"\bINSERT\s+INTO\s+(?<table>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))\s*\((?<cols>[^)]*)\)\s*VALUES\s*\((?<vals>[\s\S]*)\)(?:\s*RETURNING[\s\S]*)?(?:\s*;)?\s*$",
             RegexOptions.IgnoreCase);
         if (match.Success is false)
             return sql;
