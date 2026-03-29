@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.Channels;
 using AI.Boilerplate.Shared.Features.Chatbot;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -193,6 +193,8 @@ public partial class AppChatbot
             AIFunctionFactory.Create(CompleteTodoItem),
             AIFunctionFactory.Create(DeleteTodoItem),
             AIFunctionFactory.Create(GetTodoItems),
+            AIFunctionFactory.Create(PgTextToSqlReport),
+            AIFunctionFactory.Create(PgTextToSqlWrite),
         };
 
         var chatOptions = new ChatOptions { Tools = [.. tools] };
