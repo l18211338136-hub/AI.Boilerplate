@@ -5,12 +5,26 @@ public partial class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
     public void Configure(EntityTypeBuilder<Product> builder)
     {
+        builder.ToTable(t => t.HasComment("产品表"));
+        builder.Property(p => p.Id).HasComment("主键ID");
+        builder.Property(p => p.ShortId).HasComment("短编号");
+        builder.Property(p => p.Name).HasComment("产品名称");
+        builder.Property(p => p.Price).HasComment("产品价格");
+        builder.Property(p => p.DescriptionHTML).HasComment("HTML描述");
+        builder.Property(p => p.DescriptionText).HasComment("纯文本描述");
+        builder.Property(p => p.CreatedOn).HasComment("创建时间");
+        builder.Property(p => p.CategoryId).HasComment("类别ID");
+        builder.Property(p => p.Version).HasComment("并发版本");
+        builder.Property(p => p.HasPrimaryImage).HasComment("是否有主图");
+        builder.Property(p => p.PrimaryImageAltText).HasComment("主图替代文本");
+
         builder.HasIndex(p => p.Name).IsUnique();
         builder.HasIndex(p => p.ShortId).IsUnique();
 
         builder.Property(p => p.ShortId).UseSequence("ProductShortId");
         if (AppDbContext.IsEmbeddingEnabled)
         {
+            builder.Property(p => p.Embedding).HasComment("语义向量");
             builder.Property(p => p.Embedding).HasColumnType("vector(768)"); // Dimensions depend on the model used, here assuming 768 because of LocalTextEmbeddingGenerationService.
         }
         else

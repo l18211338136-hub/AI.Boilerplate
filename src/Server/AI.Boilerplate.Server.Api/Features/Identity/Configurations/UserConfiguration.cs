@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Server.Api.Features.Identity.Models;
+using AI.Boilerplate.Server.Api.Features.Identity.Models;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
 
 namespace AI.Boilerplate.Server.Api.Features.Identity.Configurations;
@@ -7,6 +7,19 @@ public partial class UserConfiguration : IEntityTypeConfiguration<User>
 {
     public void Configure(EntityTypeBuilder<User> builder)
     {
+        builder.ToTable(t => t.HasComment("用户表"));
+        builder.Property(user => user.Id).HasComment("用户ID");
+        builder.Property(user => user.FullName).HasComment("姓名");
+        builder.Property(user => user.Gender).HasComment("性别");
+        builder.Property(user => user.BirthDate).HasComment("出生日期");
+        builder.Property(user => user.EmailTokenRequestedOn).HasComment("邮箱验证码请求时间");
+        builder.Property(user => user.PhoneNumberTokenRequestedOn).HasComment("手机号验证码请求时间");
+        builder.Property(user => user.ResetPasswordTokenRequestedOn).HasComment("重置密码令牌请求时间");
+        builder.Property(user => user.TwoFactorTokenRequestedOn).HasComment("双因子验证码请求时间");
+        builder.Property(user => user.OtpRequestedOn).HasComment("一次性密码请求时间");
+        builder.Property(user => user.ElevatedAccessTokenRequestedOn).HasComment("提权令牌请求时间");
+        builder.Property(user => user.HasProfilePicture).HasComment("是否有头像");
+
         builder.HasMany(user => user.Roles)
             .WithOne(ur => ur.User)
             .HasForeignKey(ur => ur.UserId);
