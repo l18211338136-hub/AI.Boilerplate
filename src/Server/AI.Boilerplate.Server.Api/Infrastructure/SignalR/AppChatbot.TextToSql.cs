@@ -1,18 +1,19 @@
-﻿﻿using System.ComponentModel;
+﻿using System.ComponentModel;
 using ModelContextProtocol.Server;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
+using Npgsql;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 
 public partial class AppChatbot
 {
-    [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。拿到执行结果后，你必须将执行结果的所有列和数据原样使用 markdown 表格展示给用户，并将表格的列名（表头）翻译为易懂的中文。绝对不要擅自总结、解释、截断或遗漏数据行。不要输出其他多余的自然语言。")]
+    [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。拿到执行结果后，你必须将执行结果的所有列和数据原样使用 markdown 表格展示给用户，并将表格的列名（表头）翻译为易懂的中文。绝对不要擅自总结、解释、截断或篡改任何字段的数据值！必须严格按照返回的 JSON 里的 rows 字段的值来展示！如果数据超过了返回限制，请在末尾提示用户“数据已截断”。不要输出其他多余的自然语言。")]
     [McpServerTool(Name = nameof(PgTextToSqlReport))]
     private async Task<string> PgTextToSqlReport(
         [Required, Description("报表需求自然语言描述，例如：统计近30天各分类产品数量")] string reportRequirement,
-        [Description("最大返回行数，默认500，最大2000")] int limit = 500)
+        [Description("最大返回行数，默认10，最大500")] int limit = 10)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgTextToSqlReport)}");
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -29,37 +30,42 @@ public partial class AppChatbot
             try
             {
                 var firstResult = await ExecuteReportQueryAsync(connection, firstSql, limit, CancellationToken.None);
-                return JsonSerializer.Serialize(new
+                var jsonResult = JsonSerializer.Serialize(new
                 {
                     sql = firstResult.sql,
                     retry = false,
-                    firstResult.total,
-                    firstResult.rows
+                    total = firstResult.total,
+                    rows = firstResult.rows
                 });
+                Console.WriteLine($"\n[PgTextToSqlReport Result]: {jsonResult}");
+                return $"【系统强制指令：查询成功！】请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
             }
             catch (Exception firstExp)
             {
+                Console.WriteLine($"\n[PgTextToSqlReport Execution Failed, Retrying...]: {firstExp.Message}");
                 var secondSql = await GenerateTextToSqlAsync(reportRequirement, schemaSummary, userId, firstExp.Message, CancellationToken.None);
                 var secondResult = await ExecuteReportQueryAsync(connection, secondSql, limit, CancellationToken.None);
 
-                return JsonSerializer.Serialize(new
+                var jsonResult = JsonSerializer.Serialize(new
                 {
                     sql = secondResult.sql,
                     retry = true,
                     previousError = firstExp.Message,
-                    secondResult.total,
-                    secondResult.rows
+                    total = secondResult.total,
+                    rows = secondResult.rows
                 });
+                Console.WriteLine($"\n[PgTextToSqlReport Result (Retry)]: {jsonResult}");
+                return $"【系统强制指令：查询成功！】(经过自动重试后生效) 请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
             }
         }
         catch (Exception exp)
         {
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
-            return "[]";
+            return JsonSerializer.Serialize(new { error = exp.Message });
         }
     }
 
-    [Description("将自然语言数据变更需求转换为 SQL 并执行（INSERT/UPDATE/DELETE）。请将执行结果反馈给用户。")]
+    [Description("将自然语言数据变更需求转换为 SQL 并执行（INSERT/UPDATE/DELETE）。注意：该工具会自动提交到数据库并生效。执行成功后，你必须只回复以下纯文本内容，不要输出任何 markdown 表格，也不要提取字段：\n\n'执行成功！操作已生效。详情请查看工具返回的 JSON 原始数据。'\n\n绝对不允许自己构建表格！绝对不要再次调用此工具！")]
     [McpServerTool(Name = nameof(PgTextToSqlWrite))]
     private async Task<string> PgTextToSqlWrite(
         [Required, Description("自然语言数据变更需求，例如：把标题为A的任务标记完成")] string writeRequirement,
@@ -82,26 +88,31 @@ public partial class AppChatbot
             try
             {
                 var firstResult = await ExecuteWriteSqlAsync(connection, firstSql, safeMaxAffectedRows, accessibleTables, CancellationToken.None);
-                return JsonSerializer.Serialize(new
+                var jsonResult = JsonSerializer.Serialize(new
                 {
-                    firstResult.sql,
+                    sql = firstResult.sql,
                     retry = false,
-                    firstResult.affectedRows,
-                    firstResult.firstRow
+                    affectedRows = firstResult.affectedRows,
+                    firstRow = firstResult.firstRow
                 });
+                Console.WriteLine($"\n[PgTextToSqlWrite Result]: {jsonResult}");
+                return $"【系统强制指令：执行成功！】请立即停止调用此工具，并且只输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：{jsonResult}";
             }
             catch (Exception firstExp)
             {
+                Console.WriteLine($"\n[PgTextToSqlWrite Execution Failed, Retrying...]: {firstExp.Message}");
                 var secondSql = await GenerateTextToWriteSqlAsync(writeRequirement, schemaSummary, userId, firstExp.Message, CancellationToken.None);
                 var secondResult = await ExecuteWriteSqlAsync(connection, secondSql, safeMaxAffectedRows, accessibleTables, CancellationToken.None);
-                return JsonSerializer.Serialize(new
+                var jsonResult = JsonSerializer.Serialize(new
                 {
-                    secondResult.sql,
+                    sql = secondResult.sql,
                     retry = true,
                     previousError = firstExp.Message,
-                    secondResult.affectedRows,
-                    secondResult.firstRow
+                    affectedRows = secondResult.affectedRows,
+                    firstRow = secondResult.firstRow
                 });
+                Console.WriteLine($"\n[PgTextToSqlWrite Result (Retry)]: {jsonResult}");
+                return $"【系统强制指令：执行成功！】(经过自动重试后生效) 请立即停止调用此工具，并且只输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：{jsonResult}";
             }
         }
         catch (Exception exp)
@@ -120,20 +131,27 @@ public partial class AppChatbot
         CancellationToken cancellationToken)
     {
         var sanitizedSql = ValidateReadOnlySql(sql);
-        var safeLimit = Math.Clamp(limit, 1, 2000);
+        var safeLimit = Math.Clamp(limit, 1, 500);
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"SELECT * FROM ({sanitizedSql}) AS report_result LIMIT @p0;";
         AddParameter(command, "@p0", safeLimit);
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        var rows = new List<Dictionary<string, object?>>();
-        while (await reader.ReadAsync(cancellationToken))
+        try
         {
-            rows.Add(ReadRow(reader));
-        }
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var rows = new List<Dictionary<string, object?>>();
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                rows.Add(ReadRow(reader));
+            }
 
-        return (sanitizedSql, rows.Count, rows);
+            return (sanitizedSql, rows.Count, rows);
+        }
+        catch (PostgresException pgEx)
+        {
+            throw new ValidationException($"数据库查询失败: {pgEx.MessageText} (Position: {pgEx.Position})", pgEx);
+        }
     }
 
     private static async Task<(string sql, int affectedRows, Dictionary<string, object?>? firstRow)> ExecuteWriteSqlAsync(
@@ -149,24 +167,34 @@ public partial class AppChatbot
         await using var command = connection.CreateCommand();
         command.CommandText = executableSql;
 
-        await using var reader = await command.ExecuteReaderAsync(cancellationToken);
-        var affectedRows = 0;
-        Dictionary<string, object?>? firstRow = null;
-        while (await reader.ReadAsync(cancellationToken))
+        try
         {
-            affectedRows++;
-            firstRow ??= ReadRow(reader);
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            var affectedRows = 0;
+            Dictionary<string, object?>? firstRow = null;
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                affectedRows++;
+                firstRow ??= ReadRow(reader);
+            }
+
+            if (affectedRows > maxAffectedRows)
+                throw new ValidationException($"Affected rows {affectedRows} exceeded safety limit {maxAffectedRows}.");
+
+            return (normalizedSql, affectedRows, firstRow);
         }
-
-        if (affectedRows > maxAffectedRows)
-            throw new ValidationException($"Affected rows {affectedRows} exceeded safety limit {maxAffectedRows}.");
-
-        return (normalizedSql, affectedRows, firstRow);
+        catch (PostgresException pgEx)
+        {
+            throw new ValidationException($"数据库执行失败: {pgEx.MessageText} (Position: {pgEx.Position})", pgEx);
+        }
     }
+
+    [GeneratedRegex(@"\bRETURNING\b", RegexOptions.IgnoreCase)]
+    private static partial Regex ReturningRegex();
 
     private static string EnsureReturningAllColumns(string sql)
     {
-        if (Regex.IsMatch(sql, @"\bRETURNING\b", RegexOptions.IgnoreCase))
+        if (ReturningRegex().IsMatch(sql))
             return sql;
 
         return $"{sql.Trim().TrimEnd(';')} RETURNING *;";
@@ -208,7 +236,7 @@ public partial class AppChatbot
     }
     private static Dictionary<string, object?> ReadRow(DbDataReader reader)
     {
-        var row = new Dictionary<string, object?>(StringComparer.OrdinalIgnoreCase);
+        var row = new Dictionary<string, object?>(reader.FieldCount, StringComparer.OrdinalIgnoreCase);
         for (var i = 0; i < reader.FieldCount; i++)
         {
             var value = reader.GetValue(i);
@@ -291,6 +319,8 @@ public partial class AppChatbot
             8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译。
             9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请绝对不要在 WHERE 条件中加入 UserId 的过滤！
             10) 严禁在 WHERE 子句中使用窗口函数（如 ROW_NUMBER() OVER ()）。PostgreSQL 不允许在 WHERE 中直接使用窗口函数。如果需要限制行数，请使用 LIMIT 关键字；如果需要基于排序限制，请使用 ORDER BY 结合 LIMIT，或者使用子查询。
+            11) 必须根据提供的 schema 数据类型生成正确的语法：对于 uuid 类型请勿使用 LIKE/ILIKE 进行模糊匹配；对于 varchar/text 类型请优先使用 ILIKE 进行忽略大小写的匹配；处理时间类型时请使用正确的时间函数。
+            12) 当需要查询总数或者统计信息时，请使用正确的聚合函数（如 COUNT, SUM），并使用明确的列名。
 
             输出格式：
             仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
@@ -313,6 +343,8 @@ public partial class AppChatbot
 
             用户报表需求：
             {reportRequirement}
+            
+            如果用户没有特别指明，请默认只查询前10条数据（不要主动使用 SELECT * 查询全部数据，避免导致大模型响应崩溃）。
 
             可用数据库 schema（仅这些表和字段可用）：
             {schemaSummary}
@@ -338,6 +370,7 @@ public partial class AppChatbot
         if (string.IsNullOrWhiteSpace(sql))
             throw new ValidationException("Text-to-SQL model returned empty SQL.");
 
+        Console.WriteLine($"\n[prompt]: {prompt}");
         Console.WriteLine($"\n[Generated SQL]: {sql}");
         return sql!;
     }
@@ -362,11 +395,13 @@ public partial class AppChatbot
             2) 只生成一条 SQL，不允许分号分隔多语句；
             3) 严禁 DDL（CREATE/ALTER/DROP/TRUNCATE 等）；
             4) UPDATE/DELETE 必须带 WHERE；
-            5) 表名和字段名严格来自 schema。如果用户指令中包含在当前表 schema 中不存在的字段（如尝试按 UserId 更新但表里没有 UserId），请绝对不要将该字段加入 SQL 中，直接忽略该无效条件。
+            5) 表名和字段名必须严格、100%来自给定的 schema。绝对不要凭空捏造字段名！如果用户说“类别是BMW”，而表中只有 `CategoryId`，你绝对不能生成 `CategoryName` 这个字段！必须使用子查询去查出对应的 ID 并赋给 `CategoryId` 字段。
             6) 若需求不清晰，做最保守的精确变更，不做全表操作。
             7) 所有的表名和列名（包括 INSERT 列表、UPDATE SET 列表和 WHERE 条件中的列名）都必须使用双引号包裹，以保证大小写精确匹配（例如：UPDATE "public"."TodoItems" SET "IsDone" = true WHERE "Id" = '...'）。不要使用未带双引号的标识符。
-            8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译（例如“劳斯莱斯”不能改成其他名称）。
+            8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译。
             9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请不要在 WHERE 条件中加入 UserId 的过滤！
+            10) 必须根据提供的 schema 数据类型生成正确的语法：更新或插入 uuid、字符串、日期字段时必须使用单引号（'）包裹值；更新布尔值请使用 true/false；更新数值请直接写数字。
+            11) 严禁凭空伪造外键 UUID 值！如果需要关联其他表的数据，必须使用子查询去获取真实的 ID。注意：在使用子查询匹配外键时，如果目标字段可能是外键（比如 Categories 表的 Name 字段），请尽量使用 ILIKE 模糊匹配（例如 ILIKE '%BMW%'），以防止因用户输入的名称不完全精确而导致子查询返回 NULL，进而引发外键字段 not-null constraint 错误！
 
             输出格式：
             仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
@@ -389,6 +424,11 @@ public partial class AppChatbot
 
             用户写入需求：
             {writeRequirement}
+
+            重要指示：如果用户需要插入外键关联的数据（例如在产品表中插入带有类别的记录），你必须先生成子查询去目标表查找正确的 ID，而不是自己瞎编一个 UUID 或直接插入文字。
+            例如：INSERT INTO "public"."Products" ("Name", "CategoryId") VALUES ('新产品', (SELECT "Id" FROM "public"."Categories" WHERE "Name" ILIKE '%类别名称%' LIMIT 1));
+
+            注意：请只生成你认为必须的业务字段即可。像 `Id`、`CreatedOn`、`HasPrimaryImage` 这种系统级别或非空的默认字段，如果用户没有显式提到，你不要主动去补全它们（交由后端的自动补全机制处理），除非它们是你业务逻辑的一部分。
 
             可用数据库 schema（仅这些表和字段可用）：
             {schemaSummary}
@@ -414,6 +454,7 @@ public partial class AppChatbot
         if (string.IsNullOrWhiteSpace(sql))
             throw new ValidationException("Text-to-SQL model returned empty SQL.");
 
+        Console.WriteLine($"\n[schemaSummary]: {schemaSummary}");
         Console.WriteLine($"\n[Generated SQL]: {sql}");
         return sql!;
     }
@@ -436,6 +477,10 @@ public partial class AppChatbot
             column.Name.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase) ||
             column.Name.Equals("UpdatedAt", StringComparison.OrdinalIgnoreCase))
             return "NOW()";
+
+        if (column.DataType.Equals("bool", StringComparison.OrdinalIgnoreCase) || 
+            column.UdtName.Equals("bool", StringComparison.OrdinalIgnoreCase))
+            return "FALSE";
 
         return null;
     }
@@ -530,13 +575,37 @@ public partial class AppChatbot
 
     private async Task<PgTableInfo> ResolveTableInfoAsync(DbConnection connection, string tableInput, CancellationToken cancellationToken)
     {
+        var input = tableInput.Trim().Replace("\"", "");
+        if (string.IsNullOrWhiteSpace(input))
+            throw new ValidationException("table is required.");
+
+        var hasSchema = input.Contains('.', StringComparison.Ordinal);
+        var parts = hasSchema ? input.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) : [];
+        if (hasSchema && parts.Length != 2)
+            throw new ValidationException("table format must be table or schema.table.");
+
+        var schemaParam = hasSchema ? parts[0] : null;
+        var tableParam = hasSchema ? parts[1] : input;
+
         await using var command = connection.CreateCommand();
-        command.CommandText = """
-                              SELECT table_schema, table_name, column_name
-                              FROM information_schema.columns
-                              WHERE table_schema NOT IN ('pg_catalog', 'information_schema')
-                              ORDER BY table_schema, table_name, ordinal_position;
-                              """;
+        var sql = """
+                  SELECT table_schema, table_name, column_name
+                  FROM information_schema.columns
+                  WHERE table_schema NOT IN ('pg_catalog', 'information_schema', 'jobs')
+                    AND table_name = @p0
+                  """;
+        if (hasSchema)
+        {
+            sql += " AND table_schema = @p1";
+        }
+        sql += " ORDER BY table_schema, table_name, ordinal_position;";
+
+        command.CommandText = sql;
+        AddParameter(command, "@p0", tableParam);
+        if (hasSchema)
+        {
+            AddParameter(command, "@p1", schemaParam);
+        }
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var tables = new Dictionary<string, List<string>>(StringComparer.OrdinalIgnoreCase);
@@ -547,7 +616,7 @@ public partial class AppChatbot
             var column = reader.GetString(2);
             var fullName = $"{schema}.{table}";
 
-            if (tables.TryGetValue(fullName, out var columns) is false)
+            if (!tables.TryGetValue(fullName, out var columns))
             {
                 columns = [];
                 tables[fullName] = columns;
@@ -557,36 +626,12 @@ public partial class AppChatbot
         }
 
         if (tables.Count == 0)
-            throw new ResourceNotFoundException("No accessible tables were found in database.");
+            throw new ResourceNotFoundException($"Table '{input}' not found.");
 
-        var input = tableInput.Trim();
-        if (string.IsNullOrWhiteSpace(input))
-            throw new ValidationException("table is required.");
+        if (tables.Count > 1)
+            throw new ValidationException($"Table name '{input}' is ambiguous. Use schema.table format.");
 
-        var hasSchema = input.Contains('.', StringComparison.Ordinal);
-        string selectedFullName;
-
-        if (hasSchema)
-        {
-            var parts = input.Split('.', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries);
-            if (parts.Length != 2)
-                throw new ValidationException("table format must be table or schema.table.");
-            selectedFullName = $"{parts[0]}.{parts[1]}";
-            if (tables.ContainsKey(selectedFullName) is false)
-                throw new ResourceNotFoundException($"Table '{selectedFullName}' not found.");
-        }
-        else
-        {
-            var matched = tables.Keys
-                .Where(k => k.Split('.')[1].Equals(input, StringComparison.OrdinalIgnoreCase))
-                .ToArray();
-            if (matched.Length == 0)
-                throw new ResourceNotFoundException($"Table '{input}' not found.");
-            if (matched.Length > 1)
-                throw new ValidationException($"Table name '{input}' is ambiguous. Use schema.table format.");
-            selectedFullName = matched[0];
-        }
-
+        var selectedFullName = tables.Keys.First();
         var fullNameParts = selectedFullName.Split('.');
         var schemaName = fullNameParts[0];
         var tableName = fullNameParts[1];
@@ -636,7 +681,7 @@ public partial class AppChatbot
                                   SELECT table_schema, table_name
                                   FROM information_schema.tables
                                   WHERE table_type = 'BASE TABLE'
-                                    AND table_schema NOT IN ('pg_catalog', 'information_schema', 'jops')
+                                    AND table_schema NOT IN ('pg_catalog', 'information_schema', 'jobs')
                                   ORDER BY table_schema, table_name;
                                   """;
 
@@ -683,7 +728,7 @@ public partial class AppChatbot
         }
     }
 
-    [Description("查询指定表的数据。whereJson 为 JSON 对象，仅支持等值过滤；orderBy 例如: UpdatedAt desc, Title asc。")]
+    [Description("查询指定表的数据。whereJson 为 JSON 对象，仅支持等值过滤；orderBy 例如: UpdatedAt desc, Title asc。拿到执行结果后，必须严格按照返回的 JSON 里的 rows 字段的数据值来展示，绝对不要篡改或翻译数据值！")]
     [McpServerTool(Name = nameof(PgSelectRows))]
     private async Task<string> PgSelectRows(
         [Required, Description("表名，支持 table 或 schema.table")] string table,
@@ -720,17 +765,19 @@ public partial class AppChatbot
                 rows.Add(ReadRow(reader));
             }
 
-            return JsonSerializer.Serialize(new
+            var jsonResult = JsonSerializer.Serialize(new
             {
                 table = tableInfo.FullName,
                 total = rows.Count,
                 rows
             });
+            Console.WriteLine($"\n[PgSelectRows Result]: {jsonResult}");
+            return $"【系统强制指令：查询成功！】请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
         }
         catch (Exception exp)
         {
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
-            return "[]";
+            return JsonSerializer.Serialize(new { error = exp.Message });
         }
     }
 
@@ -781,12 +828,13 @@ public partial class AppChatbot
             if (IsTodoTable(tableInfo))
                 await NotifyTodoItemsChanged();
 
-            return JsonSerializer.Serialize(new
+            var jsonResult = JsonSerializer.Serialize(new
             {
                 table = tableInfo.FullName,
                 affectedRows = 1,
                 row
             });
+            return $"【系统强制指令：执行成功！】插入已生效，请停止调用工具。并且只输出这句话：'执行成功！数据已更新。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：\n{jsonResult}";
         }
         catch (Exception exp)
         {
@@ -841,11 +889,12 @@ public partial class AppChatbot
             if (affectedRows > 0 && IsTodoTable(tableInfo))
                 await NotifyTodoItemsChanged();
 
-            return JsonSerializer.Serialize(new
+            var jsonResult = JsonSerializer.Serialize(new
             {
                 table = tableInfo.FullName,
                 affectedRows
             });
+            return $"【系统强制指令：执行成功！】更新已生效，请停止调用工具。并且只输出这句话：'执行成功！数据已更新。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：\n{jsonResult}";
         }
         catch (Exception exp)
         {
@@ -883,11 +932,12 @@ public partial class AppChatbot
             if (affectedRows > 0 && IsTodoTable(tableInfo))
                 await NotifyTodoItemsChanged();
 
-            return JsonSerializer.Serialize(new
+            var jsonResult = JsonSerializer.Serialize(new
             {
                 table = tableInfo.FullName,
                 affectedRows
             });
+            return $"【系统强制指令：执行成功！】删除已生效，请停止调用工具。并且只输出这句话：'执行成功！数据已更新。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：\n{jsonResult}";
         }
         catch (Exception exp)
         {
@@ -896,13 +946,14 @@ public partial class AppChatbot
         }
     }
 
-    [Description("执行报表查询SQL，支持多表关联，仅允许只读 SELECT/WITH 语句。")]
+    [Description("执行报表查询SQL，支持多表关联，仅允许只读 SELECT/WITH 语句。拿到执行结果后，必须严格按照返回的 JSON 里的 rows 字段的数据值来展示，绝对不要篡改或翻译数据值！")]
     [McpServerTool(Name = nameof(PgQueryReport))]
     private async Task<string> PgQueryReport(
         [Required, Description("报表SQL，仅支持 SELECT/WITH")] string sql,
-        [Description("最大返回行数，默认500，最大2000")] int limit = 500)
+        [Description("最大返回行数，默认10，最大500")] int limit = 10)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgQueryReport)}");
+        Console.WriteLine($"[PgQueryReport SQL]: {sql}");
         await using var scope = serviceProvider.CreateAsyncScope();
 
         try
@@ -911,12 +962,19 @@ public partial class AppChatbot
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
             var reportResult = await ExecuteReportQueryAsync(connection, sql, limit, CancellationToken.None);
-            return JsonSerializer.Serialize(reportResult);
+            var jsonResult = JsonSerializer.Serialize(new
+            {
+                sql = reportResult.sql,
+                total = reportResult.total,
+                rows = reportResult.rows
+            });
+            Console.WriteLine($"\n[PgQueryReport Result]: {jsonResult}");
+            return $"【系统强制指令：查询成功！】请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
         }
         catch (Exception exp)
         {
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
-            return "[]";
+            return JsonSerializer.Serialize(new { error = exp.Message });
         }
     }
 
@@ -925,18 +983,23 @@ public partial class AppChatbot
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-                              SELECT c.table_schema,
-                                     c.table_name,
-                                     c.column_name,
-                                     COALESCE(obj_description((quote_ident(c.table_schema) || '.' || quote_ident(c.table_name))::regclass), '') AS table_comment,
-                                     COALESCE(col_description((quote_ident(c.table_schema) || '.' || quote_ident(c.table_name))::regclass, c.ordinal_position), '') AS column_comment
-                              FROM information_schema.columns c
-                              JOIN information_schema.tables t
-                                ON t.table_schema = c.table_schema
-                               AND t.table_name = c.table_name
-                              WHERE t.table_type = 'BASE TABLE'
-                                AND c.table_schema NOT IN ('pg_catalog', 'information_schema','jobs')
-                              ORDER BY c.table_schema, c.table_name, c.ordinal_position;
+                              SELECT n.nspname AS table_schema,
+                                     c.relname AS table_name,
+                                     a.attname AS column_name,
+                                     t.typname AS data_type,
+                                     COALESCE(d_table.description, '') AS table_comment,
+                                     COALESCE(d_col.description, '') AS column_comment
+                              FROM pg_class c
+                              JOIN pg_namespace n ON n.oid = c.relnamespace
+                              JOIN pg_attribute a ON a.attrelid = c.oid
+                              JOIN pg_type t ON t.oid = a.atttypid
+                              LEFT JOIN pg_description d_table ON d_table.objoid = c.oid AND d_table.objsubid = 0
+                              LEFT JOIN pg_description d_col ON d_col.objoid = c.oid AND d_col.objsubid = a.attnum
+                              WHERE c.relkind = 'r'
+                                AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'jobs')
+                                AND a.attnum > 0
+                                AND NOT a.attisdropped
+                              ORDER BY n.nspname, c.relname, a.attnum;
                               """;
 
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
@@ -947,35 +1010,33 @@ public partial class AppChatbot
             var schema = reader.GetString(0);
             var table = reader.GetString(1);
             var column = reader.GetString(2);
-            var tableComment = reader.GetString(3);
-            var columnComment = reader.GetString(4);
+            var dataType = reader.GetString(3);
+            var tableComment = reader.GetString(4);
+            var columnComment = reader.GetString(5);
             var key = $"{schema}.{table}";
-            if (grouped.TryGetValue(key, out var cols) is false)
+            
+            if (!grouped.TryGetValue(key, out var cols))
             {
                 cols = [];
                 grouped[key] = cols;
-            }
-            if (tableComments.ContainsKey(key) is false)
                 tableComments[key] = tableComment;
+            }
 
-            var resolvedColumnComment = string.IsNullOrWhiteSpace(columnComment) ? column : columnComment;
-            cols.Add($"{column}({resolvedColumnComment})");
+            var resolvedColumnComment = string.IsNullOrWhiteSpace(columnComment) ? "" : $" /* {columnComment} */";
+            cols.Add($"- `{column}` ({dataType}){resolvedColumnComment}");
         }
 
         var sb = new System.Text.StringBuilder();
         foreach (var kv in grouped.Take(100))
         {
             var full = kv.Key.Split('.');
-            var tableComment = tableComments.TryGetValue(kv.Key, out var comment) && string.IsNullOrWhiteSpace(comment) is false
+            var tableComment = tableComments.TryGetValue(kv.Key, out var comment) && !string.IsNullOrWhiteSpace(comment)
                 ? comment
                 : full[1];
-            sb.Append("- ")
-              .Append(QuoteIdentifier(full[0]))
-              .Append('.')
-              .Append(QuoteIdentifier(full[1]))
-              .Append(" [业务含义: ").Append(tableComment).Append("]")
-              .Append(" (raw: ").Append(kv.Key).Append("): ")
-              .Append(string.Join(", ", kv.Value.Take(80))).AppendLine();
+            sb.Append("### Table: `").Append(full[0]).Append("`.`").Append(full[1]).Append("`\n")
+              .Append("**Description**: ").Append(tableComment).Append("\n")
+              .Append("**Columns**:\n")
+              .Append(string.Join("\n", kv.Value)).AppendLine("\n");
         }
 
         return sb.ToString();
@@ -985,20 +1046,23 @@ public partial class AppChatbot
     {
         await using var command = connection.CreateCommand();
         command.CommandText = """
-                              SELECT c.table_schema,
-                                     c.table_name,
-                                     c.column_name,
-                                     c.data_type,
-                                     c.udt_name,
-                                     c.is_nullable,
-                                     COALESCE(c.column_default, '')
-                              FROM information_schema.columns c
-                              JOIN information_schema.tables t
-                                ON t.table_schema = c.table_schema
-                               AND t.table_name = c.table_name
-                              WHERE t.table_type = 'BASE TABLE'
-                                AND c.table_schema NOT IN ('pg_catalog', 'information_schema', 'jobs')
-                              ORDER BY c.table_schema, c.table_name, c.ordinal_position;
+                              SELECT n.nspname AS table_schema,
+                                     c.relname AS table_name,
+                                     a.attname AS column_name,
+                                     t.typname AS data_type,
+                                     t.typname AS udt_name,
+                                     CASE WHEN a.attnotnull THEN 'NO' ELSE 'YES' END AS is_nullable,
+                                     COALESCE(pg_get_expr(ad.adbin, ad.adrelid), '') AS column_default
+                              FROM pg_class c
+                              JOIN pg_namespace n ON n.oid = c.relnamespace
+                              JOIN pg_attribute a ON a.attrelid = c.oid
+                              JOIN pg_type t ON t.oid = a.atttypid
+                              LEFT JOIN pg_attrdef ad ON ad.adrelid = c.oid AND ad.adnum = a.attnum
+                              WHERE c.relkind = 'r'
+                                AND n.nspname NOT IN ('pg_catalog', 'information_schema', 'jobs')
+                                AND a.attnum > 0
+                                AND NOT a.attisdropped
+                              ORDER BY n.nspname, c.relname, a.attnum;
                               """;
         await using var reader = await command.ExecuteReaderAsync(cancellationToken);
         var grouped = new Dictionary<string, PgTableNameInfo>(StringComparer.OrdinalIgnoreCase);
@@ -1025,19 +1089,25 @@ public partial class AppChatbot
         return grouped.Values.ToList();
     }
 
+    [GeneratedRegex(@"\bINSERT\s+INTO\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))", RegexOptions.IgnoreCase)]
+    private static partial Regex InsertTableRegex();
+
+    [GeneratedRegex(@"\bUPDATE\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))", RegexOptions.IgnoreCase)]
+    private static partial Regex UpdateTableRegex();
+
+    [GeneratedRegex(@"\bDELETE\s+FROM\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))", RegexOptions.IgnoreCase)]
+    private static partial Regex DeleteTableRegex();
+
     private static string NormalizeWriteSqlTableIdentifiers(string sql, List<PgTableNameInfo> accessibleTables)
     {
         return WriteSqlRegex.IsMatch(sql) switch
         {
             true when sql.TrimStart().StartsWith("insert", StringComparison.OrdinalIgnoreCase) =>
-                Regex.Replace(sql, @"\bINSERT\s+INTO\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))",
-                    m => $"INSERT INTO {ResolveAndQuoteTableIdentifier(m.Groups["id"].Value, accessibleTables)}", RegexOptions.IgnoreCase),
+                InsertTableRegex().Replace(sql, m => $"INSERT INTO {ResolveAndQuoteTableIdentifier(m.Groups["id"].Value, accessibleTables)}"),
             true when sql.TrimStart().StartsWith("update", StringComparison.OrdinalIgnoreCase) =>
-                Regex.Replace(sql, @"\bUPDATE\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))",
-                    m => $"UPDATE {ResolveAndQuoteTableIdentifier(m.Groups["id"].Value, accessibleTables)}", RegexOptions.IgnoreCase),
+                UpdateTableRegex().Replace(sql, m => $"UPDATE {ResolveAndQuoteTableIdentifier(m.Groups["id"].Value, accessibleTables)}"),
             true when sql.TrimStart().StartsWith("delete", StringComparison.OrdinalIgnoreCase) =>
-                Regex.Replace(sql, @"\bDELETE\s+FROM\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))",
-                    m => $"DELETE FROM {ResolveAndQuoteTableIdentifier(m.Groups["id"].Value, accessibleTables)}", RegexOptions.IgnoreCase),
+                DeleteTableRegex().Replace(sql, m => $"DELETE FROM {ResolveAndQuoteTableIdentifier(m.Groups["id"].Value, accessibleTables)}"),
             _ => sql
         };
     }
@@ -1074,13 +1144,14 @@ public partial class AppChatbot
 
     private static PgTableNameInfo ResolveWriteTargetTableInfo(string sql, List<PgTableNameInfo> accessibleTables)
     {
-        var pattern = sql.TrimStart().StartsWith("insert", StringComparison.OrdinalIgnoreCase)
-            ? @"\bINSERT\s+INTO\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))"
-            : sql.TrimStart().StartsWith("update", StringComparison.OrdinalIgnoreCase)
-                ? @"\bUPDATE\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))"
-                : @"\bDELETE\s+FROM\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))";
+        Match match;
+        if (sql.TrimStart().StartsWith("insert", StringComparison.OrdinalIgnoreCase))
+            match = InsertTableRegex().Match(sql);
+        else if (sql.TrimStart().StartsWith("update", StringComparison.OrdinalIgnoreCase))
+            match = UpdateTableRegex().Match(sql);
+        else
+            match = DeleteTableRegex().Match(sql);
 
-        var match = Regex.Match(sql, pattern, RegexOptions.IgnoreCase);
         if (match.Success is false)
             throw new ValidationException("Unable to resolve target table from SQL.");
 
@@ -1115,12 +1186,17 @@ public partial class AppChatbot
         throw new ValidationException($"Invalid table identifier '{input}'.");
     }
 
+    [GeneratedRegex(@"\bINSERT\s+INTO\s+(?<table>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))\s*\((?<cols>[^)]*)\)", RegexOptions.IgnoreCase)]
+    private static partial Regex InsertColsRegex();
+
+    [GeneratedRegex(@"\bSET\s+(?<set>[\s\S]*?)(?<tail>\s+WHERE\s+[\s\S]*$|$)", RegexOptions.IgnoreCase)]
+    private static partial Regex UpdateSetRegex();
+
     private static string NormalizeWriteSqlColumnIdentifiers(string sql, PgTableNameInfo tableInfo)
     {
         if (sql.TrimStart().StartsWith("insert", StringComparison.OrdinalIgnoreCase))
         {
-            return Regex.Replace(sql,
-                @"\bINSERT\s+INTO\s+(?<table>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))\s*\((?<cols>[^)]*)\)",
+            return InsertColsRegex().Replace(sql,
                 m =>
                 {
                     var cols = m.Groups["cols"].Value
@@ -1128,14 +1204,12 @@ public partial class AppChatbot
                         .Select(c => QuoteIdentifier(ResolveColumnName(tableInfo, c).Name))
                         .ToArray();
                     return $"INSERT INTO {m.Groups["table"].Value} ({string.Join(", ", cols)})";
-                },
-                RegexOptions.IgnoreCase);
+                });
         }
 
         if (sql.TrimStart().StartsWith("update", StringComparison.OrdinalIgnoreCase))
         {
-            var normalized = Regex.Replace(sql,
-                @"\bSET\s+(?<set>[\s\S]*?)(?<tail>\s+WHERE\s+[\s\S]*$|$)",
+            var normalized = UpdateSetRegex().Replace(sql,
                 m =>
                 {
                     var assignments = m.Groups["set"].Value
@@ -1149,18 +1223,19 @@ public partial class AppChatbot
                             return $"{QuoteIdentifier(ResolveColumnName(tableInfo, left).Name)} = {right}";
                         });
                     return $"SET {string.Join(", ", assignments)}{m.Groups["tail"].Value}";
-                },
-                RegexOptions.IgnoreCase);
+                });
             return NormalizeWhereColumns(normalized, tableInfo);
         }
 
         return NormalizeWhereColumns(sql, tableInfo);
     }
 
+    [GeneratedRegex(@"(?<lhs>(?:""[^""]+""|\w+)(?:\.(?:""[^""]+""|\w+))?)\s*(?<op>=|<>|!=|<=|>=|<|>|\bLIKE\b|\bIN\b|\bIS\b)", RegexOptions.IgnoreCase)]
+    private static partial Regex WhereColumnsRegex();
+
     private static string NormalizeWhereColumns(string sql, PgTableNameInfo tableInfo)
     {
-        return Regex.Replace(sql,
-            @"(?<lhs>(?:""[^""]+""|\w+)(?:\.(?:""[^""]+""|\w+))?)\s*(?<op>=|<>|!=|<=|>=|<|>|\bLIKE\b|\bIN\b|\bIS\b)",
+        return WhereColumnsRegex().Replace(sql,
             m =>
             {
                 var left = m.Groups["lhs"].Value;
@@ -1173,8 +1248,7 @@ public partial class AppChatbot
                 }
 
                 return m.Value;
-            },
-            RegexOptions.IgnoreCase);
+            });
     }
 
     private static PgTableColumnInfo ResolveColumnName(PgTableNameInfo tableInfo, string inputColumnName)
@@ -1191,28 +1265,37 @@ public partial class AppChatbot
 
     private static string UnwrapIdentifier(string input) => input.Replace("\"", string.Empty).Trim();
 
+    [GeneratedRegex(@"\bINSERT\s+INTO\s+(?<table>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))\s*\((?<cols>[^)]*)\)\s*VALUES\s*\((?<vals>[\s\S]*)\)(?:\s*RETURNING[\s\S]*)?(?:\s*;)?\s*$", RegexOptions.IgnoreCase)]
+    private static partial Regex InsertFullRegex();
+
     private static string EnrichInsertSqlWithRequiredColumns(string sql, PgTableNameInfo tableInfo)
     {
         if (sql.TrimStart().StartsWith("insert", StringComparison.OrdinalIgnoreCase) is false)
             return sql;
 
-        var match = Regex.Match(sql,
-            @"\bINSERT\s+INTO\s+(?<table>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))\s*\((?<cols>[^)]*)\)\s*VALUES\s*\((?<vals>[\s\S]*)\)(?:\s*RETURNING[\s\S]*)?(?:\s*;)?\s*$",
-            RegexOptions.IgnoreCase);
+        // 【移除子查询短路逻辑】：因为我们已经升级了 SplitSqlCsv 方法，它现在能够完美解析带有子查询的复杂 VALUES。
+        // 所以我们允许程序继续执行，为 AI 生成的带子查询的 SQL 自动补全像 CreatedOn 这样的非空字段。
+
+        var match = InsertFullRegex().Match(sql);
         if (match.Success is false)
             return sql;
 
         var cols = SplitSqlCsv(match.Groups["cols"].Value).Select(UnwrapIdentifier).ToList();
         var vals = SplitSqlCsv(match.Groups["vals"].Value).ToList();
+        
         if (cols.Count != vals.Count)
+        {
+            Console.WriteLine($"[EnrichInsertSqlWithRequiredColumns] Column count ({cols.Count}) does not match value count ({vals.Count}). SQL: {sql}");
             return sql;
+        }
 
         foreach (var column in tableInfo.Columns.Values)
         {
             if (cols.Contains(column.Name, StringComparer.OrdinalIgnoreCase))
                 continue;
 
-            if (column.IsNullable || string.IsNullOrWhiteSpace(column.ColumnDefault) is false)
+            // 如果列允许为空，或者数据库层面已经有默认值，或者它是由数据库自动生成的主键（如 serial, identity），跳过
+            if (column.IsNullable || string.IsNullOrWhiteSpace(column.ColumnDefault) is false || column.ColumnDefault.Contains("nextval", StringComparison.OrdinalIgnoreCase))
                 continue;
 
             var generated = BuildGeneratedColumnValue(column);
@@ -1234,13 +1317,17 @@ public partial class AppChatbot
         var sb = new System.Text.StringBuilder();
         var depth = 0;
         var inSingleQuote = false;
+        var inDoubleQuote = false;
 
         foreach (var ch in input)
         {
-            if (ch == '\'' && (sb.Length == 0 || sb[^1] != '\\'))
+            if (ch == '\'' && !inDoubleQuote && (sb.Length == 0 || sb[^1] != '\\'))
                 inSingleQuote = !inSingleQuote;
+                
+            if (ch == '"' && !inSingleQuote && (sb.Length == 0 || sb[^1] != '\\'))
+                inDoubleQuote = !inDoubleQuote;
 
-            if (inSingleQuote is false)
+            if (!inSingleQuote && !inDoubleQuote)
             {
                 if (ch == '(') depth++;
                 if (ch == ')') depth--;
@@ -1258,7 +1345,6 @@ public partial class AppChatbot
         if (sb.Length > 0)
             result.Add(sb.ToString().Trim());
 
-        Console.WriteLine($"SplitSqlCsv-result:{result}");
         return result;
     }
 }
