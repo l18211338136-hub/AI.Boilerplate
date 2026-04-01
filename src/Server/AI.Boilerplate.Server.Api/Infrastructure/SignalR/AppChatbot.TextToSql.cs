@@ -9,6 +9,11 @@ namespace AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 
 public partial class AppChatbot
 {
+    private static readonly System.Text.Json.JsonSerializerOptions _jsonSerializerOptions = new()
+    {
+        Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
+    };
+
     [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。拿到执行结果后，你必须将执行结果的所有列和数据原样使用 markdown 表格展示给用户，并将表格的列名（表头）翻译为易懂的中文。绝对不要擅自总结、解释、截断或篡改任何字段的数据值！必须严格按照返回的 JSON 里的 rows 字段的值来展示！如果数据超过了返回限制，请在末尾提示用户“数据已截断”。不要输出其他多余的自然语言。")]
     [McpServerTool(Name = nameof(PgTextToSqlReport))]
     private async Task<string> PgTextToSqlReport(
@@ -36,7 +41,7 @@ public partial class AppChatbot
                     retry = false,
                     total = firstResult.total,
                     rows = firstResult.rows
-                });
+                }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlReport Result]: {jsonResult}");
                 return $"【系统强制指令：查询成功！】请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
             }
@@ -53,7 +58,7 @@ public partial class AppChatbot
                     previousError = firstExp.Message,
                     total = secondResult.total,
                     rows = secondResult.rows
-                });
+                }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlReport Result (Retry)]: {jsonResult}");
                 return $"【系统强制指令：查询成功！】(经过自动重试后生效) 请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
             }
@@ -61,7 +66,7 @@ public partial class AppChatbot
         catch (Exception exp)
         {
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
-            return JsonSerializer.Serialize(new { error = exp.Message });
+            return JsonSerializer.Serialize(new { error = exp.Message }, _jsonSerializerOptions);
         }
     }
 
@@ -94,7 +99,7 @@ public partial class AppChatbot
                     retry = false,
                     affectedRows = firstResult.affectedRows,
                     firstRow = firstResult.firstRow
-                });
+                }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlWrite Result]: {jsonResult}");
                 return $"【系统强制指令：执行成功！】请立即停止调用此工具，并且只输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：{jsonResult}";
             }
@@ -110,7 +115,7 @@ public partial class AppChatbot
                     previousError = firstExp.Message,
                     affectedRows = secondResult.affectedRows,
                     firstRow = secondResult.firstRow
-                });
+                }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlWrite Result (Retry)]: {jsonResult}");
                 return $"【系统强制指令：执行成功！】(经过自动重试后生效) 请立即停止调用此工具，并且只输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：{jsonResult}";
             }
@@ -719,7 +724,7 @@ public partial class AppChatbot
             {
                 table = tableInfo.FullName,
                 columns = tableInfo.Columns.Values.OrderBy(c => c).ToArray()
-            });
+            }, _jsonSerializerOptions);
         }
         catch (Exception exp)
         {
@@ -770,14 +775,14 @@ public partial class AppChatbot
                 table = tableInfo.FullName,
                 total = rows.Count,
                 rows
-            });
+            }, _jsonSerializerOptions);
             Console.WriteLine($"\n[PgSelectRows Result]: {jsonResult}");
             return $"【系统强制指令：查询成功！】请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
         }
         catch (Exception exp)
         {
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
-            return JsonSerializer.Serialize(new { error = exp.Message });
+            return JsonSerializer.Serialize(new { error = exp.Message }, _jsonSerializerOptions);
         }
     }
 
@@ -833,7 +838,7 @@ public partial class AppChatbot
                 table = tableInfo.FullName,
                 affectedRows = 1,
                 row
-            });
+            }, _jsonSerializerOptions);
             return $"【系统强制指令：执行成功！】插入已生效，请停止调用工具。并且只输出这句话：'执行成功！数据已更新。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：\n{jsonResult}";
         }
         catch (Exception exp)
@@ -893,7 +898,7 @@ public partial class AppChatbot
             {
                 table = tableInfo.FullName,
                 affectedRows
-            });
+            }, _jsonSerializerOptions);
             return $"【系统强制指令：执行成功！】更新已生效，请停止调用工具。并且只输出这句话：'执行成功！数据已更新。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：\n{jsonResult}";
         }
         catch (Exception exp)
@@ -936,7 +941,7 @@ public partial class AppChatbot
             {
                 table = tableInfo.FullName,
                 affectedRows
-            });
+            }, _jsonSerializerOptions);
             return $"【系统强制指令：执行成功！】删除已生效，请停止调用工具。并且只输出这句话：'执行成功！数据已更新。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：\n{jsonResult}";
         }
         catch (Exception exp)
@@ -967,14 +972,14 @@ public partial class AppChatbot
                 sql = reportResult.sql,
                 total = reportResult.total,
                 rows = reportResult.rows
-            });
+            }, _jsonSerializerOptions);
             Console.WriteLine($"\n[PgQueryReport Result]: {jsonResult}");
             return $"【系统强制指令：查询成功！】请严格根据以下 JSON 数据(rows)原样生成 markdown 表格。绝对不允许擅自联想、伪造、翻译或篡改任何字段的**数据值**！\n{jsonResult}";
         }
         catch (Exception exp)
         {
             serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
-            return JsonSerializer.Serialize(new { error = exp.Message });
+            return JsonSerializer.Serialize(new { error = exp.Message }, _jsonSerializerOptions);
         }
     }
 
