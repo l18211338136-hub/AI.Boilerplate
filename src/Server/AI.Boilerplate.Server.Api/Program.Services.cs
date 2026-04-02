@@ -395,7 +395,10 @@ public static partial class Program
             return options;
         });
 
-        services.AddHttpClient("AI");
+        services.AddHttpClient("AI", httpClient =>
+        {
+            httpClient.Timeout = TimeSpan.FromMinutes(10); // 增加 AI 调用的 HTTP 超时时间到 10 分钟
+        });
 
         if (string.IsNullOrEmpty(appSettings.AI?.OpenAI?.ChatApiKey) is false)
         {
@@ -403,6 +406,7 @@ public static partial class Program
             services.AddChatClient(sp => new OpenAI.Chat.ChatClient(model: appSettings.AI.OpenAI.ChatModel, credential: new(appSettings.AI.OpenAI.ChatApiKey), options: new()
             {
                 Endpoint = appSettings.AI.OpenAI.ChatEndpoint,
+                NetworkTimeout = TimeSpan.FromMinutes(10), // 增加底层 ClientPipeline 的网络超时
                 Transport = new HttpClientPipelineTransport(sp.GetRequiredService<IHttpClientFactory>().CreateClient("AI"))
             }).AsIChatClient())
             .UseLogging()
@@ -417,6 +421,7 @@ public static partial class Program
                 credential: new Azure.AzureKeyCredential(appSettings.AI.AzureOpenAI.ChatApiKey),
                 options: new()
                 {
+                   // NetworkTimeout = TimeSpan.FromMinutes(10), // 增加底层 ClientPipeline 的网络超时
                     Transport = new Azure.Core.Pipeline.HttpClientTransport(sp.GetRequiredService<IHttpClientFactory>().CreateClient("AI"))
                 }).AsIChatClient(appSettings.AI.AzureOpenAI.ChatModel))
             .UseLogging()

@@ -1,9 +1,10 @@
-﻿using System.ComponentModel;
+using System.ComponentModel;
 using ModelContextProtocol.Server;
 using System.Data.Common;
 using System.Text.RegularExpressions;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
 using Npgsql;
+using Microsoft.Extensions.AI;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 
@@ -14,11 +15,11 @@ public partial class AppChatbot
         Encoder = System.Text.Encodings.Web.JavaScriptEncoder.UnsafeRelaxedJsonEscaping
     };
 
-    [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。拿到执行结果后，你必须将执行结果的所有列和数据原样使用 markdown 表格展示给用户，并将表格的列名（表头）翻译为易懂的中文。绝对不要擅自总结、解释、截断或篡改任何字段的数据值！必须严格按照返回的 JSON 里的 rows 字段的值来展示！如果数据超过了返回限制，请在末尾提示用户“数据已截断”。不要输出其他多余的自然语言。")]
+    [Description("将自然语言报表需求转换为SQL并执行。仅执行只读 SELECT/WITH；失败时自动带错误上下文重试一次。注意：如果用户明确要求“可视化”、“图表”、“图”、“界面”或“生成报表界面”，【绝对不要】调用此工具，必须直接调用 `PgGenerateDashboard`！拿到执行结果后，你必须将执行结果的所有列和数据原样使用 markdown 表格展示给用户，并将表格的列名（表头）翻译为易懂的中文。绝对不要擅自总结、解释、截断或篡改任何字段的数据值！必须严格按照返回的 JSON 里的 rows 字段的值来展示！如果数据超过了返回限制，请在末尾提示用户“数据已截断”。不要输出其他多余的自然语言。")]
     [McpServerTool(Name = nameof(PgTextToSqlReport))]
     private async Task<string> PgTextToSqlReport(
         [Required, Description("报表需求自然语言描述，例如：统计近30天各分类产品数量")] string reportRequirement,
-        [Description("最大返回行数，默认10，最大500")] int limit = 10)
+        [Description("最大返回行数。除非用户指定，否则不要传此参数")] int limit = 1000)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgTextToSqlReport)}");
         await using var scope = serviceProvider.CreateAsyncScope();
@@ -70,7 +71,174 @@ public partial class AppChatbot
         }
     }
 
-    [Description("将自然语言数据变更需求转换为 SQL 并执行（INSERT/UPDATE/DELETE）。注意：该工具会自动提交到数据库并生效。执行成功后，你必须只回复以下纯文本内容，不要输出任何 markdown 表格，也不要提取字段：\n\n'执行成功！操作已生效。详情请查看工具返回的 JSON 原始数据。'\n\n绝对不允许自己构建表格！绝对不要再次调用此工具！")]
+    [Description("根据自然语言需求，查询数据库并自动生成交互式单文件 HTML 数据大屏（仪表盘）。当用户要求“生成图表”、“可视化”、“报表页面”等需求时，【必须优先且仅调用此工具】。拿到执行结果后，请将生成的 HTML 代码块原样反馈给用户，不要输出多余解释。")]
+    [McpServerTool(Name = nameof(PgGenerateDashboard))]
+    private async Task<string> PgGenerateDashboard(
+        [Required, Description("报表需求自然语言描述，例如：统计各分类产品数量及价格分布")] string requirement,
+        [Description("最大返回行数。除非用户指定，否则不要传此参数")] int limit = 1000)
+    {
+        Console.WriteLine($"\n[AI Tool Called]: {nameof(PgGenerateDashboard)}");
+        await using var scope = serviceProvider.CreateAsyncScope();
+
+        try
+        {
+            var userId = await EnsureCurrentUserIdIsPresent();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
+            var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+
+            var firstSql = await GenerateTextToSqlAsync(requirement, schemaSummary, userId, null, CancellationToken.None);
+            
+            string jsonResult;
+            try
+            {
+                var firstResult = await ExecuteReportQueryAsync(connection, firstSql, limit, CancellationToken.None);
+                jsonResult = JsonSerializer.Serialize(firstResult.rows, _jsonSerializerOptions);
+            }
+            catch (Exception firstExp)
+            {
+                Console.WriteLine($"\n[PgGenerateDashboard Execution Failed, Retrying...]: {firstExp.Message}");
+                var secondSql = await GenerateTextToSqlAsync(requirement, schemaSummary, userId, firstExp.Message, CancellationToken.None);
+                var secondResult = await ExecuteReportQueryAsync(connection, secondSql, limit, CancellationToken.None);
+                jsonResult = JsonSerializer.Serialize(secondResult.rows, _jsonSerializerOptions);
+            }
+
+            var html = await GenerateDashboardHtmlAsync(requirement, jsonResult, CancellationToken.None);
+            return $"```html\n{html}\n```";
+        }
+        catch (Exception exp)
+        {
+            serviceProvider.GetRequiredService<ServerExceptionHandler>().Handle(exp);
+            return JsonSerializer.Serialize(new { error = exp.Message }, _jsonSerializerOptions);
+        }
+    }
+
+    private async Task<string> GenerateDashboardHtmlAsync(string requirement, string dataJson, CancellationToken cancellationToken)
+    {
+        if (serviceProvider.GetService<IChatClient>() is not IChatClient chatClient)
+            throw new ResourceNotFoundException("IChatClient is not available.");
+
+        var systemPrompt = """
+            你是一位拥有10年经验的数据可视化专家和高级前端工程师，擅长将枯燥的数据转化为极具视觉冲击力的交互式仪表盘。 
+            你的核心任务是根据用户输入的自然语义需求和提供的 JSON 数据，编写一个单文件的、自包含的 HTML 代码。
+
+            【🔴 极其重要的强制约束 🔴】
+            1. **图表容器高度强制约束**：必须为每一个 ECharts 图表容器（div）设置明确的内联宽度和高度！例如 `<div id="main-chart" style="width: 100%; height: 400px; min-height: 400px;"></div>`。如果你不设置具体高度，ECharts 图表将渲染为 0 像素高，导致页面完全看不到图表！
+            2. **严禁 Blazor 脚本**：绝对禁止在图表中引入任何和 Blazor 相关的脚本。
+            3. **图标库引入规范**：如果需要引入图标库，必须使用 `<link rel="stylesheet">` 引入 CSS 文件，绝对不要用 `<script>` 引入 CSS 文件！
+            4. **窗口自适应**：必须在 `window.onresize` 时调用所有 echart 实例的 `resize()` 方法以确保自适应。
+
+            【🛠️ 技术栈规范】
+            *   **核心框架**：原生 HTML5。
+            *   **样式系统**：必须使用 Tailwind CSS (通过 CDN 引入)，用于快速构建现代化的响应式布局、卡片式设计、阴影和排版。请直接在 HTML 标签上使用 Tailwind 的 class（例如 `<body class="bg-gray-900 text-white">`），**绝对不要在 `<style>` 中手写无效的 CSS 伪类（例如 `background-color: bg-gray-900;` 是错误的！）**。
+            *   **可视化引擎**：必须使用 Apache ECharts (通过 CDN 引入)，因为它提供了丰富的图表类型和炫酷的交互效果。如果需要 3D 效果，请额外引入 `echarts-gl`。
+            *   **图标库**：使用 FontAwesome 或 RemixIcon (CDN) 增强 UI 细节。
+
+            【🎨 视觉与交互要求】
+            **设计风格与用户自定义**：
+            *   默认情况下，页面推荐使用“高级感、科技感或赛博朋克风”的**深色模式（Dark Mode）**，使用深邃的暗色背景（必须直接使用 tailwind 类，如 `<body class="bg-gray-900 text-white min-h-screen">`）。
+            *   **【极其重要】：如果用户在需求中明确指定了其他风格（如“极简风”、“明亮模式”、“可爱风”、“手绘风”等），必须无条件遵循用户的指定风格！** 此时请灵活调整背景色、字体颜色、卡片样式和 ECharts 的配色方案。
+            *   在科技感/深色模式下，建议使用半透明的**玻璃拟态（Glassmorphism）**效果，搭配细腻的边框高光和背景网格/噪点纹理。卡片使用带透明度的背景（如 `class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl"`）。
+
+            **布局逻辑**：
+            *   **顶部**：醒目的报表标题和关键指标卡片（可以带有图标）。如果数据中有最大、最小、平均、总和等维度，应当优先在这里使用数字指标卡片展示，排成一排或多列。
+            *   **主体**：采用栅格布局，根据数据维度自动规划图表位置。布局不要使用太挤的栅格，可以考虑使用一列或两列布局，并为每个图表卡片增加足够的内边距(`p-6`)和外边距(`mb-6`)。
+            *   **图表样式**：所有图表必须开启 ToolTip 提示框，支持数据缩放，并具备鼠标悬停时的动画反馈。
+            *   **3D 效果与动画**：强烈建议在 ECharts 配置中使用 3D 图表（如 `bar3D`, `scatter3D`, `pie3D` 等）或者通过 `itemStyle` 配置动态渐变色、阴影特效（如 `shadowBlur: 20, shadowColor: 'rgba(0, 255, 255, 0.8)'`）来营造强烈的 3D 动画与科幻效果。除非用户明确要求不要 3D 或特效。
+
+            **智能图表映射逻辑**：
+            *   **时间序列数据** → 带有渐变色填充的**折线图**或**面积图**（Area）。
+            *   **分类对比数据** → 带有 3D 效果或**圆角**的柱状图（Bar），使用动态渐变色。
+            *   **占比数据** → 带有 3D 质感的**环形图**（Doughnut）或 南丁格尔玫瑰图（Pie）。
+            *   **关系/分布数据** → 3D 散点图或热力图。
+            *   **长文本处理**：如果数据项名称过长，请配置 X 轴标签倾斜（`rotate: -30`）或换行展示。
+
+            **【极致高级排版与赛博朋克动画增强（核心要求）】**：
+            1.  **动态星空/粒子背景（强制要求）**：绝对不能只用纯色背景！你**必须**使用 `particles.js` 生成动态粒子背景。
+                *   在 `<body>` 第一行添加 `<div id="particles-js" class="fixed inset-0 z-0 pointer-events-none"></div>`。
+                *   主内容容器必须加上 `relative z-10` 以确保显示在粒子上方，例如 `<div class="relative z-10 min-h-screen p-4 md:p-8">`。
+                *   背景颜色使用深色渐变，例如 `body` 加上 `class="bg-gradient-to-br from-gray-900 via-[#0b0c10] to-black text-white overflow-x-hidden"`。
+                *   在 `<script>` 中必须包含粒子初始化代码：`particlesJS("particles-js", {"particles":{"number":{"value":80},"color":{"value":"#00ffff"},"shape":{"type":"circle"},"opacity":{"value":0.5},"size":{"value":3},"line_linked":{"enable":true,"distance":150,"color":"#00ffff","opacity":0.4,"width":1},"move":{"enable":true,"speed":2}},"interactivity":{"events":{"onhover":{"enable":true,"mode":"repulse"}}}});`。
+            2.  **玻璃拟态与全息投影边框**：所有卡片必须带有极其强烈的毛玻璃质感（`backdrop-blur-2xl bg-white/5` 或 `bg-gradient-to-b from-white/10 to-transparent`），同时外层包裹一层霓虹发光边框（`border border-cyan-500/50 shadow-[0_0_20px_rgba(0,255,255,0.3)]`），当鼠标悬停时（`hover:`），发光强度和卡片透明度要发生平滑且夸张的过渡变化（`transition-all duration-500 hover:shadow-[0_0_40px_rgba(0,255,255,0.6)]`），制造全息投影的交互感。
+            3.  **赛博朋克风数字指标卡片**：指标卡片（例如总数、总金额）绝对不能干瘪。必须设计为独立的悬浮小卡片，排成网格（`grid-cols-2 md:grid-cols-4 gap-6`）。数字必须极其巨大（`text-6xl` 或 `text-7xl`），并且应用动态的渐变流光文字特效（`bg-clip-text text-transparent bg-gradient-to-r from-cyan-400 via-purple-500 to-pink-500`），最好配有 CSS 关键帧动画让数字带有“呼吸灯”效果或轻微浮动效果。
+            4.  **ECharts 图表究极美化与发光**：
+                *   **背景透明**：`backgroundColor: 'transparent'`。
+                *   **数据列科幻发光（核心）**：柱状图、折线图、饼图必须在 `itemStyle` 中配置极其强烈的发光特效！例如 `shadowBlur: 50`, `shadowColor: 'rgba(0, 255, 255, 1)'`。这是体现科技感的灵魂！
+                *   **折线图动态流光**：如果是折线图，必须开启 `smooth: true`，线条本身要细且极度发光，同时使用 `areaStyle` 填充带有高透明度渐变（如从 0.8 到 0）的色彩到底部。强烈建议开启 `animationDuration: 3000`, `animationEasing: 'cubicOut'` 和带有轨迹感的动画配置。
+                *   **柱状图3D圆角与霓虹渐变**：柱状图必须配置圆角 `itemStyle: { borderRadius: [12, 12, 0, 0] }`，并且每个柱子必须是从深紫到高亮青色的线性霓虹渐变（`LinearGradient`）。
+                *   **深色系网格线**：坐标轴的分割线（`splitLine`）必须是极细的 `rgba(255,255,255,0.05)` 虚线。
+                *   **ToolTip 赛博化**：把 ToolTip 的背景也设置为半透明玻璃拟态，边框为青色发光。
+
+            【🚀 执行步骤】
+            1.  **分析数据**：理解数据的结构、字段含义及数据之间的关系。
+            2.  **规划布局**：设计一个充满未来感的 HTML 结构。
+            3.  **编写代码**：
+                *   在 `<head>` 中必须精确引入以下 CDN 链接（绝不能错）：
+                    - Tailwind CSS: `<script src="https://cdn.tailwindcss.com"></script>`
+                    - ECharts: `<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>`
+                    - Particles.js: `<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>`
+                    - (如果使用了 3D 图表) ECharts-GL: `<script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>`
+                *   在 `<style>` 中，务必手写一段极其炫酷的 CSS 关键帧动画（Keyframes），比如背景流光、卡片浮动呼吸、或者边框霓虹灯跑马灯效果，并应用到主要的容器上。
+                *   在 `<body>` 中编写语义化的 HTML 结构，大量使用 Tailwind 的毛玻璃、渐变和发光 class。注意：Tailwind v3 的所有 JIT 语法（如 `bg-[#0b0c10]`, `shadow-[0_0_20px_#0ff]`）都可以直接使用！
+                *   **【极其重要】**：所有自定义的 JavaScript 代码（包括 particlesJS 和 ECharts 的初始化代码）必须放在 `</body>` 标签之前，或者包裹在 `window.onload = function() { ... }` 中，以确保图表容器和粒子容器 DOM 元素已经完全加载！
+                *   初始化 ECharts 时配置极其炫酷、带有伪 3D 质感或科幻感的 `option` 参数（大量使用 `linearGradient`、阴影 `shadowBlur` 等）。
+                *   **【极其重要】**：严禁在未引入 `echarts-gl` 时使用带有 `3D` 后缀的图表类型（如 `bar3D`）！强烈建议直接使用普通的 2D 图表，通过 `itemStyle` 配置极其夸张的渐变色和阴影特效来**模拟出极品科幻发光质感**！
+
+            【✅ 输出约束】
+            *   必须让页面看起来极其昂贵、充满未来科技感、并且充满流畅的 CSS 或 JS 动画！
+            *   严禁使用外部 CSS/JS 文件，所有代码必须内联或在 CDN 中获取。
+            *   确保代码没有语法错误，且在不同分辨率下均能自适应显示。
+            *   如果数据量较大，请自动添加滚动条或分页样式。
+            *   默认配色方案应和谐统一，避免使用高饱和度的刺眼颜色，推荐使用科技蓝、紫罗兰或霓虹色系。
+            *   **仅输出 HTML 代码**，绝对不要包含 markdown 代码块符号 (```html) 或任何其他解释性文字。
+            """;
+
+        var prompt = $"""
+            用户需求：
+            {requirement}
+
+            查询到的数据 (JSON 格式)：
+            {dataJson}
+            """;
+
+        ChatOptions chatOptions = new()
+        {
+            ResponseFormat = ChatResponseFormat.Text,
+            MaxOutputTokens = 8192
+        };
+        configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
+
+        var response = await chatClient.GetResponseAsync(
+            messages: [
+                new(Microsoft.Extensions.AI.ChatRole.System, systemPrompt),
+                new(Microsoft.Extensions.AI.ChatRole.User, prompt)
+            ],
+            options: chatOptions,
+            cancellationToken: cancellationToken);
+
+        var html = response.Text?.Trim();
+        Console.WriteLine($"\n[Generated HTML]: {html}");
+        if (html != null && html.StartsWith("```html", StringComparison.OrdinalIgnoreCase))
+        {
+            html = html.Substring(7);
+            if (html.EndsWith("```"))
+            {
+                html = html.Substring(0, html.Length - 3);
+            }
+        }
+        else if (html != null && html.StartsWith("```", StringComparison.OrdinalIgnoreCase))
+        {
+            html = html.Substring(3);
+            if (html.EndsWith("```"))
+            {
+                html = html.Substring(0, html.Length - 3);
+            }
+        }
+
+        return html?.Trim() ?? string.Empty;
+    }
+
+    [Description("将自然语言数据变更需求转换为 SQL 并执行（INSERT/UPDATE/DELETE）。注意：该工具会自动提交到数据库并生效。执行成功后，你【必须立即停止调用本工具】，且只对用户输出“执行成功！”。绝对不允许自己构建表格！绝对不要尝试读取、翻译或提取数据字段！")]
     [McpServerTool(Name = nameof(PgTextToSqlWrite))]
     private async Task<string> PgTextToSqlWrite(
         [Required, Description("自然语言数据变更需求，例如：把标题为A的任务标记完成")] string writeRequirement,
@@ -97,11 +265,10 @@ public partial class AppChatbot
                 {
                     sql = firstResult.sql,
                     retry = false,
-                    affectedRows = firstResult.affectedRows,
-                    firstRow = firstResult.firstRow
+                    affectedRows = firstResult.affectedRows
                 }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlWrite Result]: {jsonResult}");
-                return $"【系统强制指令：执行成功！】请立即停止调用此工具，并且只输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：{jsonResult}";
+                return $"【系统强制指令：执行成功！】数据已生效。请立即停止调用此工具，并且只对用户输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取、联想或翻译任何字段！";
             }
             catch (Exception firstExp)
             {
@@ -113,11 +280,10 @@ public partial class AppChatbot
                     sql = secondResult.sql,
                     retry = true,
                     previousError = firstExp.Message,
-                    affectedRows = secondResult.affectedRows,
-                    firstRow = secondResult.firstRow
+                    affectedRows = secondResult.affectedRows
                 }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlWrite Result (Retry)]: {jsonResult}");
-                return $"【系统强制指令：执行成功！】(经过自动重试后生效) 请立即停止调用此工具，并且只输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取或翻译任何字段！原始数据为：{jsonResult}";
+                return $"【系统强制指令：执行成功！】(经过自动重试后生效) 数据已生效。请立即停止调用此工具，并且只对用户输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取、联想或翻译任何字段！";
             }
         }
         catch (Exception exp)
@@ -136,7 +302,7 @@ public partial class AppChatbot
         CancellationToken cancellationToken)
     {
         var sanitizedSql = ValidateReadOnlySql(sql);
-        var safeLimit = Math.Clamp(limit, 1, 500);
+        var safeLimit = Math.Clamp(limit, 1, 10000);
 
         await using var command = connection.CreateCommand();
         command.CommandText = $"SELECT * FROM ({sanitizedSql}) AS report_result LIMIT @p0;";
@@ -325,7 +491,7 @@ public partial class AppChatbot
             9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请绝对不要在 WHERE 条件中加入 UserId 的过滤！
             10) 严禁在 WHERE 子句中使用窗口函数（如 ROW_NUMBER() OVER ()）。PostgreSQL 不允许在 WHERE 中直接使用窗口函数。如果需要限制行数，请使用 LIMIT 关键字；如果需要基于排序限制，请使用 ORDER BY 结合 LIMIT，或者使用子查询。
             11) 必须根据提供的 schema 数据类型生成正确的语法：对于 uuid 类型请勿使用 LIKE/ILIKE 进行模糊匹配；对于 varchar/text 类型请优先使用 ILIKE 进行忽略大小写的匹配；处理时间类型时请使用正确的时间函数。
-            12) 当需要查询总数或者统计信息时，请使用正确的聚合函数（如 COUNT, SUM），并使用明确的列名。
+            12) 当需要查询总数或者统计信息时，请使用正确的聚合函数（如 COUNT, SUM, MAX, MIN, AVG），并使用明确的列名。在生成统计报表时，应尽可能提供极为丰富的数据维度（例如除了简单的分组数量，还必须同时计算价格/金额的总和、最大值、最小值、平均值等相关统计，甚至按时间维度（如天、月）进行多维度 Group By），从而让报表数据极其饱满。
 
             输出格式：
             仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
@@ -348,8 +514,6 @@ public partial class AppChatbot
 
             用户报表需求：
             {reportRequirement}
-            
-            如果用户没有特别指明，请默认只查询前10条数据（不要主动使用 SELECT * 查询全部数据，避免导致大模型响应崩溃）。
 
             可用数据库 schema（仅这些表和字段可用）：
             {schemaSummary}
@@ -739,7 +903,7 @@ public partial class AppChatbot
         [Required, Description("表名，支持 table 或 schema.table")] string table,
         [Description("过滤条件 JSON，例如 {\"Title\":\"任务A\",\"IsDone\":false}")] string? whereJson = null,
         [Description("排序字段，例如 UpdatedAt desc, Title asc")] string? orderBy = null,
-        [Description("返回行数，默认50，最大500")] int limit = 50,
+        [Description("返回行数。除非用户指定，否则不要传此参数")] int limit = 1000,
         [Description("分页偏移，默认0")] int offset = 0)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgSelectRows)} (table: {table}, limit: {limit}, offset: {offset})");
@@ -756,7 +920,7 @@ public partial class AppChatbot
             var parameterIndex = 0;
             var whereClause = BuildWhereClause(whereJson, tableInfo, command, ref parameterIndex);
             var orderByClause = BuildOrderByClause(orderBy, tableInfo);
-            var safeLimit = Math.Clamp(limit, 1, 500);
+            var safeLimit = Math.Clamp(limit, 1, 10000);
             var safeOffset = Math.Max(offset, 0);
 
             command.CommandText = $"SELECT * FROM {tableInfo.QuotedName}{whereClause}{orderByClause} LIMIT @p{parameterIndex++} OFFSET @p{parameterIndex};";
@@ -955,7 +1119,7 @@ public partial class AppChatbot
     [McpServerTool(Name = nameof(PgQueryReport))]
     private async Task<string> PgQueryReport(
         [Required, Description("报表SQL，仅支持 SELECT/WITH")] string sql,
-        [Description("最大返回行数，默认10，最大500")] int limit = 10)
+        [Description("最大返回行数。除非用户指定，否则不要传此参数")] int limit = 1000)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgQueryReport)}");
         Console.WriteLine($"[PgQueryReport SQL]: {sql}");

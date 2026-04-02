@@ -54,7 +54,17 @@
                             }
                             else
                             {
-                                <BitMarkdownViewer Markdown="@message.Content" />
+                                @if (ExtractHtmlDashboard(message.Content, out var dashboardHtml))
+                                {
+                                    <BitMarkdownViewer Markdown="@RemoveHtmlDashboard(message.Content!)" />
+                                    <BitButton Style="margin-top: 8px" Variant="BitVariant.Outline" OnClick="() => OpenDashboard(dashboardHtml)">
+                                         <BitIcon IconName="@BitIconName.BarChartVerticalFill" /> @Localizer["打开可视化图表"]
+                                     </BitButton>
+                                }
+                                else
+                                {
+                                    <BitMarkdownViewer Markdown="@message.Content" />
+                                }
                                 @if (message.Successful is false)
                                 {
                                     <BitTag Color="BitColor.Error" Size="BitSize.Small" Style="min-height:18px">
@@ -141,4 +151,22 @@
             </BitStack>
         </Body>
     </BitProPanel>
+
+    <BitModal @bind-IsOpen="isDashboardModalOpen" FullSize>
+        <BitStack Style="height: 100vh; padding: 1rem;">
+            <BitStack Horizontal AutoHeight Alignment="BitAlignment.Center">
+                <BitText Typography="BitTypography.H6">@Localizer["数据可视化图表"]</BitText>
+                <BitSpacer />
+                <BitButton IconOnly
+                           Title="@Localizer[nameof(AppStrings.Cancel)]"
+                           Color="BitColor.Info"
+                           Variant="BitVariant.Text"
+                           IconName="@BitIconName.ChromeClose" 
+                           OnClick="() => isDashboardModalOpen = false" />
+            </BitStack>
+            <div style="flex-grow: 1; width: 100%; border-radius: 8px; overflow: hidden; background-color: white; border: 1px solid #ccc; display: flex;">
+                <iframe srcdoc="@dashboardHtml" sandbox="allow-scripts" style="width: 100%; height: 100%; min-height: 80vh; flex-grow: 1; border: none;"></iframe>
+            </div>
+        </BitStack>
+    </BitModal>
 </section>

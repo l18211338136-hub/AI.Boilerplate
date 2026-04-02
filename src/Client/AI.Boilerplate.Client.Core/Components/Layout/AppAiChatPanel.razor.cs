@@ -1,4 +1,4 @@
-﻿using System.Threading.Channels;
+using System.Threading.Channels;
 using AI.Boilerplate.Shared.Features.Chatbot;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
 using Microsoft.AspNetCore.Components.Web;
@@ -29,6 +29,54 @@ public partial class AppAiChatPanel
     private List<string> followUpSuggestions = [];
     private Action unsubAdHaveTrouble = default!;
 
+    private bool isDashboardModalOpen;
+    private string dashboardHtml = string.Empty;
+
+    private bool ExtractHtmlDashboard(string? content, out string html)
+    {
+        html = string.Empty;
+        if (string.IsNullOrWhiteSpace(content)) return false;
+
+        var startTag = "```html";
+        var endTag = "```";
+        var startIndex = content.IndexOf(startTag, StringComparison.OrdinalIgnoreCase);
+        if (startIndex >= 0)
+        {
+            var codeStartIndex = startIndex + startTag.Length;
+            var endIndex = content.IndexOf(endTag, codeStartIndex, StringComparison.OrdinalIgnoreCase);
+            if (endIndex > codeStartIndex)
+            {
+                html = content.Substring(codeStartIndex, endIndex - codeStartIndex).Trim();
+                return true;
+            }
+        }
+        return false;
+    }
+
+    private string RemoveHtmlDashboard(string content)
+    {
+        if (string.IsNullOrWhiteSpace(content)) return content;
+        
+        var startTag = "```html";
+        var endTag = "```";
+        var startIndex = content.IndexOf(startTag, StringComparison.OrdinalIgnoreCase);
+        if (startIndex >= 0)
+        {
+            var codeStartIndex = startIndex + startTag.Length;
+            var endIndex = content.IndexOf(endTag, codeStartIndex, StringComparison.OrdinalIgnoreCase);
+            if (endIndex > codeStartIndex)
+            {
+                return content.Remove(startIndex, endIndex + endTag.Length - startIndex).Trim();
+            }
+        }
+        return content;
+    }
+
+    private void OpenDashboard(string html)
+    {
+        dashboardHtml = html;
+        isDashboardModalOpen = true;
+    }
 
     protected override Task OnInitAsync()
     {

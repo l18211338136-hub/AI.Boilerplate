@@ -195,6 +195,7 @@ public partial class AppChatbot
             //AIFunctionFactory.Create(GetTodoItems),
             AIFunctionFactory.Create(PgTextToSqlReport),
             AIFunctionFactory.Create(PgTextToSqlWrite),
+            AIFunctionFactory.Create(PgGenerateDashboard)
         };
 
         var chatOptions = new ChatOptions { Tools = [.. tools] };
