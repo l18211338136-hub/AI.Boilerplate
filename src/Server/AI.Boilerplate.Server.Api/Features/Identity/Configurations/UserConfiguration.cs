@@ -20,6 +20,22 @@ public partial class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.ElevatedAccessTokenRequestedOn).HasComment("提权令牌请求时间");
         builder.Property(user => user.HasProfilePicture).HasComment("是否有头像");
 
+        // ASP.NET Core Identity 内置字段注释
+        builder.Property(user => user.UserName).HasComment("用户名");
+        builder.Property(user => user.NormalizedUserName).HasComment("标准化用户名");
+        builder.Property(user => user.Email).HasComment("邮箱地址");
+        builder.Property(user => user.NormalizedEmail).HasComment("标准化邮箱地址");
+        builder.Property(user => user.EmailConfirmed).HasComment("邮箱是否已确认");
+        builder.Property(user => user.PasswordHash).HasComment("密码哈希值");
+        builder.Property(user => user.SecurityStamp).HasComment("安全戳(凭据变更时刷新)");
+        builder.Property(user => user.ConcurrencyStamp).HasComment("并发戳(乐观并发控制)");
+        builder.Property(user => user.PhoneNumber).HasComment("手机号码");
+        builder.Property(user => user.PhoneNumberConfirmed).HasComment("手机号是否已确认");
+        builder.Property(user => user.TwoFactorEnabled).HasComment("是否启用双因子认证");
+        builder.Property(user => user.LockoutEnd).HasComment("账号锁定结束时间");
+        builder.Property(user => user.LockoutEnabled).HasComment("是否允许账号锁定");
+        builder.Property(user => user.AccessFailedCount).HasComment("登录失败次数");
+
         builder.HasMany(user => user.Roles)
             .WithOne(ur => ur.User)
             .HasForeignKey(ur => ur.UserId);
