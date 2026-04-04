@@ -1,4 +1,4 @@
-using System.ComponentModel;
+﻿﻿using System.ComponentModel;
 using ModelContextProtocol.Server;
 using System.Data.Common;
 using System.Text.RegularExpressions;
@@ -127,6 +127,7 @@ public partial class AppChatbot
             2. **严禁 Blazor 脚本**：绝对禁止在图表中引入任何和 Blazor 相关的脚本。
             3. **图标库引入规范**：如果需要引入图标库，必须使用 `<link rel="stylesheet">` 引入 CSS 文件，绝对不要用 `<script>` 引入 CSS 文件！
             4. **窗口自适应**：必须在 `window.onresize` 时调用所有 echart 实例的 `resize()` 方法以确保自适应。
+            5. **数据真实性与动态解析（绝对强制）**：绝对不能在生成的 HTML 代码中通过硬编码伪造数据（如写死假数字 `$10,000,000` 或假名称 `BMW`）。你必须在生成的 `<script>` 中将提供的原始 JSON 数据原样声明为一个 JavaScript 变量（例如 `const rawData = [真实的JSON数据];`），然后通过 JavaScript 动态计算并渲染出总数、总金额等指标卡片内容，并通过 DOM 操作（如 `document.getElementById('total-amount').innerText = ...`）写入卡片。同理，ECharts 的 `xAxis.data` 和 `series.data` 也必须通过对 `rawData` 的动态解析生成。请确保最终图表和卡片显示的数据与传入的 JSON 完全一致！
 
             【🛠️ 技术栈规范】
             *   **核心框架**：原生 HTML5。
@@ -136,7 +137,7 @@ public partial class AppChatbot
 
             【🎨 视觉与交互要求】
             **设计风格与用户自定义**：
-            *   默认情况下，页面推荐使用“高级感、科技感或赛博朋克风”的**深色模式（Dark Mode）**，使用深邃的暗色背景（必须直接使用 tailwind 类，如 `<body class="bg-gray-900 text-white min-h-screen">`）。
+            *   默认情况下，页面推荐使用“高级感、科技感或赛博朋克风”的**深色模式（Dark Mode）**，使用深邃的暗色背景（必须直接使用 tailwind 类，如 `<body class="bg-gray-900 text-white min-h-[100vh]">`，绝对不要使用 `min-h-screen;` 这种错误的 CSS 语法）。
             *   **【极其重要】：如果用户在需求中明确指定了其他风格（如“极简风”、“明亮模式”、“可爱风”、“手绘风”等），必须无条件遵循用户的指定风格！** 此时请灵活调整背景色、字体颜色、卡片样式和 ECharts 的配色方案。
             *   在科技感/深色模式下，建议使用半透明的**玻璃拟态（Glassmorphism）**效果，搭配细腻的边框高光和背景网格/噪点纹理。卡片使用带透明度的背景（如 `class="bg-white/10 backdrop-blur-md border border-white/20 rounded-xl shadow-2xl"`）。
 
@@ -178,8 +179,8 @@ public partial class AppChatbot
                     - ECharts: `<script src="https://cdn.jsdelivr.net/npm/echarts@5.5.0/dist/echarts.min.js"></script>`
                     - Particles.js: `<script src="https://cdn.jsdelivr.net/particles.js/2.0.0/particles.min.js"></script>`
                     - (如果使用了 3D 图表) ECharts-GL: `<script src="https://cdn.jsdelivr.net/npm/echarts-gl@2.0.9/dist/echarts-gl.min.js"></script>`
-                *   在 `<style>` 中，务必手写一段极其炫酷的 CSS 关键帧动画（Keyframes），比如背景流光、卡片浮动呼吸、或者边框霓虹灯跑马灯效果，并应用到主要的容器上。
-                *   在 `<body>` 中编写语义化的 HTML 结构，大量使用 Tailwind 的毛玻璃、渐变和发光 class。注意：Tailwind v3 的所有 JIT 语法（如 `bg-[#0b0c10]`, `shadow-[0_0_20px_#0ff]`）都可以直接使用！
+                *   在 `<style>` 中，务必手写一段极其炫酷的 CSS 关键帧动画（Keyframes），比如背景流光、卡片浮动呼吸、或者边框霓虹灯跑马灯效果，并应用到主要的容器上。请确保所有 CSS 都是合法且原生的 CSS3 语法，**绝对不要在 `<style>` 标签中混入 Tailwind 的工具类（例如不要写出 `min-h-screen;` 或 `backdrop-blur-2xl` 这种非法 CSS）**。
+                *   在 `<body>` 中编写语义化的 HTML 结构，大量使用 Tailwind 的毛玻璃、渐变和发光 class。注意：Tailwind v3 的所有 JIT 语法（如 `bg-[#0b0c10]`, `shadow-[0_0_20px_#0ff]`）都可以直接使用！请确保 `<body class="...">` 中包含 `bg-black` 或深色渐变等能够明确覆盖背景颜色的 class，以免出现白色背景导致白色文字看不见的问题。
                 *   **【极其重要】**：所有自定义的 JavaScript 代码（包括 particlesJS 和 ECharts 的初始化代码）必须放在 `</body>` 标签之前，或者包裹在 `window.onload = function() { ... }` 中，以确保图表容器和粒子容器 DOM 元素已经完全加载！
                 *   初始化 ECharts 时配置极其炫酷、带有伪 3D 质感或科幻感的 `option` 参数（大量使用 `linearGradient`、阴影 `shadowBlur` 等）。
                 *   **【极其重要】**：严禁在未引入 `echarts-gl` 时使用带有 `3D` 后缀的图表类型（如 `bar3D`）！强烈建议直接使用普通的 2D 图表，通过 `itemStyle` 配置极其夸张的渐变色和阴影特效来**模拟出极品科幻发光质感**！
@@ -207,6 +208,20 @@ public partial class AppChatbot
             MaxOutputTokens = 8192
         };
         configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
+        var coderModelId = configuration["AI:OpenAI:CoderModel"] ?? configuration["AI:AzureOpenAI:CoderModel"];
+        if (!string.IsNullOrWhiteSpace(coderModelId))
+        {
+            chatOptions.ModelId = coderModelId;
+        }
+
+        var coderEndpoint = configuration["AI:OpenAI:CoderEndpoint"] ?? configuration["AI:AzureOpenAI:CoderEndpoint"];
+        if (!string.IsNullOrWhiteSpace(coderEndpoint))
+        {
+            chatOptions.AdditionalProperties ??= new();
+            chatOptions.AdditionalProperties["Endpoint"] = new Uri(coderEndpoint);
+        }
+
+        Console.WriteLine($"\n[AI Tool Calling]: {nameof(PgGenerateDashboard)} | Model: {chatOptions.ModelId ?? "default"} | Endpoint: {coderEndpoint ?? "default"}");
 
         var response = await chatClient.GetResponseAsync(
             messages: [
@@ -508,6 +523,20 @@ public partial class AppChatbot
             }
         };
         configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
+        var coderModelId = configuration["AI:OpenAI:CoderModel"] ?? configuration["AI:AzureOpenAI:CoderModel"];
+        if (!string.IsNullOrWhiteSpace(coderModelId))
+        {
+            chatOptions.ModelId = coderModelId;
+        }
+
+        var coderEndpoint = configuration["AI:OpenAI:CoderEndpoint"] ?? configuration["AI:AzureOpenAI:CoderEndpoint"];
+        if (!string.IsNullOrWhiteSpace(coderEndpoint))
+        {
+            chatOptions.AdditionalProperties ??= new();
+            chatOptions.AdditionalProperties["Endpoint"] = new Uri(coderEndpoint);
+        }
+
+        Console.WriteLine($"\n[AI Tool Calling]: {nameof(PgTextToSqlReport)} | Model: {chatOptions.ModelId ?? "default"} | Endpoint: {coderEndpoint ?? "default"}");
 
         var prompt = $"""
             当前用户的 UserId 为：{currentUserId}
@@ -587,6 +616,20 @@ public partial class AppChatbot
             }
         };
         configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
+        var coderModelId = configuration["AI:OpenAI:CoderModel"] ?? configuration["AI:AzureOpenAI:CoderModel"];
+        if (!string.IsNullOrWhiteSpace(coderModelId))
+        {
+            chatOptions.ModelId = coderModelId;
+        }
+
+        var coderEndpoint = configuration["AI:OpenAI:CoderEndpoint"] ?? configuration["AI:AzureOpenAI:CoderEndpoint"];
+        if (!string.IsNullOrWhiteSpace(coderEndpoint))
+        {
+            chatOptions.AdditionalProperties ??= new();
+            chatOptions.AdditionalProperties["Endpoint"] = new Uri(coderEndpoint);
+        }
+
+        Console.WriteLine($"\n[AI Tool Calling]: {nameof(PgTextToSqlWrite)} | Model: {chatOptions.ModelId ?? "default"} | Endpoint: {coderEndpoint ?? "default"}");
 
         var prompt = $"""
             当前用户的 UserId 为：{currentUserId}

@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -402,10 +402,13 @@ public static partial class Program
 
         if (string.IsNullOrEmpty(appSettings.AI?.OpenAI?.ChatApiKey) is false)
         {
+            var modelId = appSettings.AI.OpenAI.ChatModel;
+            var endpoint = appSettings.AI.OpenAI.ChatEndpoint;
+
             // https://github.com/dotnet/extensions/tree/main/src/Libraries/Microsoft.Extensions.AI.OpenAI#microsoftextensionsaiopenai
-            services.AddChatClient(sp => new OpenAI.Chat.ChatClient(model: appSettings.AI.OpenAI.ChatModel, credential: new(appSettings.AI.OpenAI.ChatApiKey), options: new()
+            services.AddChatClient(sp => new OpenAI.Chat.ChatClient(model: modelId, credential: new(appSettings.AI.OpenAI.ChatApiKey), options: new()
             {
-                Endpoint = appSettings.AI.OpenAI.ChatEndpoint,
+                Endpoint = endpoint,
                 NetworkTimeout = TimeSpan.FromMinutes(10), // 增加底层 ClientPipeline 的网络超时
                 Transport = new HttpClientPipelineTransport(sp.GetRequiredService<IHttpClientFactory>().CreateClient("AI"))
             }).AsIChatClient())
@@ -416,14 +419,17 @@ public static partial class Program
         }
         else if (string.IsNullOrEmpty(appSettings.AI?.AzureOpenAI?.ChatApiKey) is false)
         {
+            var modelId = appSettings.AI.AzureOpenAI.ChatModel;
+            var endpoint = appSettings.AI.AzureOpenAI.ChatEndpoint;
+
             // https://github.com/dotnet/extensions/tree/main/src/Libraries/Microsoft.Extensions.AI.AzureAIInference#microsoftextensionsaiazureaiinference
-            services.AddChatClient(sp => new Azure.AI.Inference.ChatCompletionsClient(endpoint: appSettings.AI.AzureOpenAI.ChatEndpoint,
+            services.AddChatClient(sp => new Azure.AI.Inference.ChatCompletionsClient(endpoint: endpoint,
                 credential: new Azure.AzureKeyCredential(appSettings.AI.AzureOpenAI.ChatApiKey),
                 options: new()
                 {
                    // NetworkTimeout = TimeSpan.FromMinutes(10), // 增加底层 ClientPipeline 的网络超时
                     Transport = new Azure.Core.Pipeline.HttpClientTransport(sp.GetRequiredService<IHttpClientFactory>().CreateClient("AI"))
-                }).AsIChatClient(appSettings.AI.AzureOpenAI.ChatModel))
+                }).AsIChatClient(modelId))
             .UseLogging()
             .UseFunctionInvocation()
             .UseOpenTelemetry();
