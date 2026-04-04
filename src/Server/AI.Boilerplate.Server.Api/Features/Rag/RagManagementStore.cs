@@ -1,9 +1,8 @@
+﻿using System.Data.Common;
+using System.Text;
 using AI.Boilerplate.Shared.Features.Rag.Dtos;
-using AI.Boilerplate.Server.Api.Infrastructure.Data;
-using Microsoft.EntityFrameworkCore;
 using Pgvector;
 using Pgvector.EntityFrameworkCore;
-using System.Text;
 
 namespace AI.Boilerplate.Server.Api.Features.Rag;
 
@@ -12,12 +11,14 @@ public class RagManagementStore
     private readonly AppDbContext dbContext;
     private readonly IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator;
     private readonly ServerApiSettings serverApiSettings;
+    private readonly IServiceProvider serviceProvider;
 
-    public RagManagementStore(AppDbContext dbContext, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, ServerApiSettings serverApiSettings)
+    public RagManagementStore(AppDbContext dbContext, IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator, ServerApiSettings serverApiSettings, IServiceProvider serviceProvider)
     {
         this.dbContext = dbContext;
         this.embeddingGenerator = embeddingGenerator;
         this.serverApiSettings = serverApiSettings;
+        this.serviceProvider = serviceProvider;
     }
 
     public async Task<List<RagKnowledgeBaseDto>> GetKnowledgeBases(CancellationToken cancellationToken)
@@ -557,26 +558,175 @@ public class RagManagementStore
         };
     }
 
+    /// <summary>
+    /// 生成数据库 Schema 知识库切片（按表切片）
+    /// </summary>
+    public async Task GenerateSchemaSlicesAsync(CancellationToken cancellationToken = default)
+    {
+        const string KB_NAME = "数据库 Schema 知识库";
+
+        // 1. 幂等性检查 (使用原生 SQL 或 AsNoTracking 优化)
+        if (await dbContext.RagKnowledgeBases.AsNoTracking().AnyAsync(x => x.Name == KB_NAME, cancellationToken))
+        {
+            Console.WriteLine($"[Schema Generator] {KB_NAME} 已存在，跳过初始化。");
+            return;
+        }
+
+        var now = DateTimeOffset.UtcNow;
+
+        try
+        {
+            // 2. 创建知识库和文档 (逻辑保持不变，但先不 Add 到 Context)
+            var knowledgeBase = new RagKnowledgeBase
+            {
+                Id = Guid.CreateVersion7(),
+                Code = "SYSTEM_SCHEMA",
+                Name = KB_NAME,
+                EmbeddingModel = "shaw/dmeta-embedding-zh",
+                EmbeddingDimension = 768,
+                IsEnabled = true,
+                CreatedOn = now,
+                UpdatedAt = now
+            };
+            await dbContext.RagKnowledgeBases.AddAsync(knowledgeBase);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            var document = new RagDocument
+            {
+                Id = Guid.CreateVersion7(),
+                KnowledgeBaseId = knowledgeBase.Id,
+                SourceType = "db",
+                SourceId = "db:public",
+                Title = "数据库 Schema Public",
+                CreatedOn = now,
+                UpdatedAt = now
+            };
+
+            await dbContext.RagDocuments.AddAsync(document);
+            await dbContext.SaveChangesAsync(cancellationToken);
+
+            // 3. 执行 SQL 查询 Schema 信息 (保持 ADO.NET 写法)
+            var flatData = new List<SchemaInfoTempDto>();
+
+            await using var scope = serviceProvider.CreateAsyncScope();
+            var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
+            await using var command = connection.CreateCommand();
+            command.CommandText = @"
+    SELECT
+    c.relname AS table_name,
+    obj_description(c.oid) AS table_comment,
+    a.attname AS column_name,
+    pg_catalog.format_type(a.atttypid, a.atttypmod) AS data_type,
+    a.attnotnull AS is_required,
+    col_description(a.attrelid, a.attnum) AS column_comment
+FROM
+    pg_catalog.pg_attribute a
+JOIN
+    pg_catalog.pg_class c ON a.attrelid = c.oid
+JOIN
+    pg_catalog.pg_namespace n ON c.relnamespace = n.oid
+WHERE
+    n.nspname = 'public'
+    AND a.attnum > 0
+    AND NOT a.attisdropped
+    AND c.relkind = 'r' 
+ORDER BY
+    c.relname,
+    a.attnum";
+
+            await using var reader = await command.ExecuteReaderAsync(cancellationToken);
+            while (await reader.ReadAsync(cancellationToken))
+            {
+                flatData.Add(new SchemaInfoTempDto
+                {
+                    TableName = reader.GetString(reader.GetOrdinal("table_name")),
+                    TableComment = reader.IsDBNull(reader.GetOrdinal("table_comment")) ? null : reader.GetString(reader.GetOrdinal("table_comment")),
+                    ColumnName = reader.GetString(reader.GetOrdinal("column_name")),
+                    DataType = reader.GetString(reader.GetOrdinal("data_type")),
+                    IsRequired = reader.GetBoolean(reader.GetOrdinal("is_required")),
+                    ColumnComment = reader.IsDBNull(reader.GetOrdinal("column_comment")) ? null : reader.GetString(reader.GetOrdinal("column_comment"))
+                });
+            }
+
+            if (!flatData.Any())
+            {
+                Console.WriteLine("[Schema Generator] 未查询到任何表结构信息。");
+                return;
+            }
+
+            // 4. 准备切片数据
+            var chunksToInsert = new List<RagChunk>();
+            var tables = flatData.GroupBy(x => x.TableName);
+
+            int chunkIndex = 0;
+            foreach (var tableGroup in tables)
+            {
+                var md = new StringBuilder();
+                md.AppendLine($"# 数据库表结构: {tableGroup.Key}");
+
+                var tableComment = tableGroup.First().TableComment;
+                if (!string.IsNullOrWhiteSpace(tableComment))
+                {
+                    var safeComment = tableComment.Replace("|", "\\|");
+                    md.AppendLine($"> **业务描述**: {safeComment}");
+                }
+
+                md.AppendLine();
+                md.AppendLine("### 字段详情");
+                md.AppendLine("| 字段名 | 类型 | 必填 | 说明 |");
+                md.AppendLine("| :--- | :--- | :--- | :--- |");
+
+                foreach (var col in tableGroup)
+                {
+                    var required = col.IsRequired ? "✅" : "❌";
+                    var comment = string.IsNullOrWhiteSpace(col.ColumnComment)
+                        ? "-"
+                        : col.ColumnComment.Replace("|", "\\|"); 
+                    md.AppendLine($"| `{col.ColumnName}` | `{col.DataType}` | {required} | {comment} |");
+                }
+
+                var text = md.ToString().Replace("\r\n", "\n").Replace("\r", "\n");
+
+                var chunkingOptions = await GetChunkingOptions(cancellationToken);
+                var embeddings = await embeddingGenerator.GenerateAsync(text, cancellationToken: cancellationToken);
+
+                chunksToInsert.Add(new RagChunk
+                {
+                    Id = Guid.CreateVersion7(),
+                    DocumentId = document.Id,
+                    ChunkIndex = chunkIndex,
+                    Content = text,
+                    TokenCount = CountTokens(text),
+                    Embedding = new Vector(Normalize(embeddings.Vector.ToArray())),
+                    CreatedOn = now,
+                    UpdatedAt = now
+                });
+                chunkIndex++;
+            }
+            await dbContext.AddRangeAsync(chunksToInsert);
+            await dbContext.SaveChangesAsync(cancellationToken);
+            Console.WriteLine($"[Schema Generator] 成功初始化 {tables.Count()} 张表，生成 {chunksToInsert.Count} 个切片。");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"[Schema Generator] 初始化失败: {ex.Message}");
+        }
+    }
+
+    // 用于接收 SQL 查询结果的临时类 (Keyless Entity)
+    public class SchemaInfoTempDto
+    {
+        public string TableName { get; set; }
+        public string TableComment { get; set; }
+        public string ColumnName { get; set; }
+        public string DataType { get; set; }
+        public bool IsRequired { get; set; }
+        public string ColumnComment { get; set; }
+    }
+
     private async Task EnsureSeedDataAsync(CancellationToken cancellationToken)
     {
-        if (await dbContext.RagKnowledgeBases.AnyAsync(cancellationToken))
-            return;
-
-        var dto = new RagKnowledgeBaseUpsertDto
-        {
-            Code = "main-schema",
-            Name = "Main Schema",
-            EmbeddingModel = "shaw/dmeta-embedding-zh",
-            EmbeddingDimension = 768
-        };
-        var kb = await CreateKnowledgeBase(dto, cancellationToken);
-        await AddDocument(new RagDocumentUpsertDto
-        {
-            KnowledgeBaseId = kb.Id,
-            SourceType = "db",
-            SourceId = "public.users",
-            Title = "Users Table Schema"
-        }, cancellationToken);
+       await GenerateSchemaSlicesAsync(cancellationToken);
     }
 
     private static string[] CreateDefaultChunkTexts(string sourceId)
@@ -774,5 +924,13 @@ public class RagManagementStore
 
         var matched = queryKeywords.Count(chunkKeywords.Contains);
         return (double)matched / queryKeywords.Count;
+    }
+
+    private async Task<DbConnection> OpenAppDbConnectionAsync(AppDbContext db, CancellationToken cancellationToken)
+    {
+        var connection = db.Database.GetDbConnection();
+        if (connection.State != System.Data.ConnectionState.Open)
+            await connection.OpenAsync(cancellationToken);
+        return connection;
     }
 }
