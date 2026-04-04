@@ -1,0 +1,508 @@
+@using AI.Boilerplate.Shared.Features.Rag.Dtos
+@attribute [Route(PageUrls.RagManagement)]
+@attribute [Route("{culture?}" + PageUrls.RagManagement)]
+@attribute [Authorize(Policy = AppFeatures.Management.ManageAiPrompt)]
+@inherits AppPageBase
+
+<AppPageData Title="@Localizer[nameof(AppStrings.RagManagementTitle)]"
+             PageTitle="@Localizer[nameof(AppStrings.RagManagementPageTitle)]"
+             SubTitle="@Localizer[nameof(AppStrings.RagManagementSubTitle)]" />
+
+<div class="rag-page">
+    <div class="rag-header">
+        <div class="rag-header-title">
+            <BitText Typography="BitTypography.H5">RAG 知识库管理</BitText>
+            <BitText Typography="BitTypography.Body2" Color="BitColor.SecondaryForeground">管理企业知识库、文档分片与向量召回</BitText>
+        </div>
+        <div class="rag-header-actions">
+            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.Questionnaire" OnClick="OpenTutorial">使用教程</BitButton>
+            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.Settings" OnClick="WrapHandled(OpenChunkingPanel)">分片规则</BitButton>
+            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.RecycleBin" OnClick="WrapHandled(OpenRecyclePanel)">回收站</BitButton>
+            <BitButton AutoLoading Variant="BitVariant.Outline" IconName="@BitIconName.Refresh" OnClick="WrapHandled(RefreshKnowledgeBases)" />
+            <BitButton Class="rag-primary-btn" IconName="@BitIconName.Add" OnClick="OpenAddKnowledgeBaseModal">新建知识库</BitButton>
+        </div>
+    </div>
+
+    <div class="rag-content">
+        <!-- Left Sidebar: Knowledge Bases -->
+        <div class="rag-sidebar">
+            <div class="rag-sidebar-header">
+                <BitText Typography="BitTypography.Subtitle1">知识库列表</BitText>
+                <BitSpacer />
+                <BitText Typography="BitTypography.Subtitle2" Color="BitColor.SecondaryForeground">@knowledgeBases.Count 个</BitText>
+            </div>
+            
+            <div class="rag-sidebar-body">
+                @if (isLoadingKnowledgeBases)
+                {
+                    <div class="rag-loading-wrapper">
+                        <BitStack Gap="1rem" Style="width: 100%;">
+                            <BitShimmer Height="3rem" />
+                            <BitShimmer Height="3rem" />
+                            <BitShimmer Height="3rem" />
+                        </BitStack>
+                    </div>
+                }
+                else if (knowledgeBaseNavItems.Count == 0)
+                {
+                    <div class="rag-empty-state">
+                        <BitIcon IconName="@BitIconName.Database" Class="rag-empty-icon" />
+                        <BitText>暂无知识库，请先创建</BitText>
+                    </div>
+                }
+                else
+                {
+                    <BitNav NoCollapse
+                            Reselectable
+                            Items="PaginatedKnowledgeBaseNavItems"
+                            Mode="BitNavMode.Manual"
+                            OnSelectItem="WrapHandled(async (BitNavItem item) => await HandleOnSelectKnowledgeBase(item))">
+                        <ItemTemplate Context="item">
+                            @{
+                                var kb = (item.Data as RagKnowledgeBaseDto)!;
+                            }
+                            <div class="rag-kb-nav-item @(selectedKnowledgeBaseId == kb.Id ? "selected" : "")">
+                                <BitIcon IconName="@BitIconName.Database" Class="rag-kb-nav-icon" />
+                                <div class="rag-kb-nav-info">
+                                    <BitText Typography="BitTypography.Body1" Class="rag-kb-nav-title">@item.Text</BitText>
+                                    <BitText Color="BitColor.SecondaryForeground" Typography="BitTypography.Subtitle2">
+                                        文档: @kb.DocumentCount · 切片: @kb.ChunkCount
+                                    </BitText>
+                                </div>
+                            </div>
+                        </ItemTemplate>
+                    </BitNav>
+                }
+            </div>
+
+            @if (TotalKbPages > 1)
+            {
+                <div class="rag-sidebar-pagination">
+                    <BitButton Variant="BitVariant.Text" IconOnly IconName="@BitIconName.ChevronLeft" IsEnabled="@(kbCurrentPage > 1)" OnClick="WrapHandled(GoToPreviousKbPage)" />
+                    <span class="rag-page-info">@kbCurrentPage / @TotalKbPages</span>
+                    <BitButton Variant="BitVariant.Text" IconOnly IconName="@BitIconName.ChevronRight" IsEnabled="@(kbCurrentPage < TotalKbPages)" OnClick="WrapHandled(GoToNextKbPage)" />
+                </div>
+            }
+        </div>
+
+        <!-- Right Main Area -->
+        <div class="rag-main">
+            @if (selectedKnowledgeBaseId is null)
+            {
+                <div class="rag-empty-main">
+                    <BitIcon IconName="@BitIconName.Library" Class="rag-empty-icon-large" />
+                    <BitText Typography="BitTypography.H6">请选择或创建一个知识库</BitText>
+                </div>
+            }
+            else
+            {
+                var currentKb = knowledgeBases.FirstOrDefault(k => k.Id == selectedKnowledgeBaseId);
+                
+                <div class="rag-main-header">
+                    <div class="rag-main-header-info">
+                        <BitText Typography="BitTypography.H5">@(string.IsNullOrWhiteSpace(currentKb?.Name) ? currentKb?.Code : currentKb?.Name)</BitText>
+                        <div class="rag-kb-tags">
+                            <span class="rag-tag">@currentKb?.Code</span>
+                            <span class="rag-tag">@currentKb?.EmbeddingModel</span>
+                        </div>
+                    </div>
+                    <BitSpacer />
+                    <div class="rag-main-header-actions">
+                        <BitButton Variant="BitVariant.Outline" IconName="@BitIconName.Edit" OnClick="OpenEditKnowledgeBaseModal">设置</BitButton>
+                        <BitButton Variant="BitVariant.Outline" Color="BitColor.Error" IconName="@BitIconName.Delete" OnClick="RequestDeleteKnowledgeBase">删除</BitButton>
+                    </div>
+                </div>
+
+                <div class="rag-main-tabs">
+                    <BitPivot SelectedKey="@selectedPivotKey" SelectedKeyChanged="@(key => selectedPivotKey = key)">
+                        <BitPivotItem Key="@DocumentsTabKey" HeaderText="文档管理">
+                            <div class="rag-tab-toolbar">
+                                <BitText Typography="BitTypography.Subtitle1">全部文档</BitText>
+                                <BitSpacer />
+                                <BitButton Class="rag-primary-btn" IconName="@BitIconName.Add" OnClick="OpenAddDocumentModal">添加文档</BitButton>
+                            </div>
+
+                            @if (isLoadingDocuments)
+                            {
+                                <div class="rag-loading-wrapper">
+                                    <BitStack Gap="1rem" Style="width: 100%;">
+                                        <BitShimmer Height="2.5rem" />
+                                        <BitShimmer Height="3rem" />
+                                        <BitShimmer Height="3rem" />
+                                        <BitShimmer Height="3rem" />
+                                    </BitStack>
+                                </div>
+                            }
+                            else if (documents.Count == 0)
+                            {
+                                <div class="rag-empty-state">
+                                    <BitIcon IconName="@BitIconName.PageList" Class="rag-empty-icon" />
+                                    <BitText>知识库暂无文档</BitText>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="rag-table-container">
+                                    <table class="rag-table">
+                                        <thead>
+                                            <tr>
+                                                <th>标题</th>
+                                                <th>来源类型</th>
+                                                <th>来源标识</th>
+                                                <th class="text-right">切片数</th>
+                                                <th>正文预览</th>
+                                                <th class="text-right">操作</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody>
+                                            @foreach (var item in PaginatedDocuments)
+                                            {
+                                                <tr class="@(selectedDocumentId == item.Id ? "active" : "")">
+                                                    <td class="font-medium cursor-pointer" @onclick="WrapHandled(() => SelectDocument(item.Id))">@item.Title</td>
+                                                    <td>
+                                                        <span class="rag-status-tag @GetSourceTypeColorClass(item.SourceType)">
+                                                            @GetSourceTypeName(item.SourceType)
+                                                        </span>
+                                                    </td>
+                                                    <td class="text-secondary">@item.SourceId</td>
+                                                    <td class="text-right">
+                                                        <span class="rag-badge">@item.ChunkCount</span>
+                                                    </td>
+                                                    <td class="rag-preview-cell" title="@item.ContentPreview">
+                                                        @(string.IsNullOrWhiteSpace(item.ContentPreview) ? "-" : item.ContentPreview)
+                                                    </td>
+                                                    <td class="text-right">
+                                                        <div class="rag-action-group">
+                                                            <BitButton Variant="BitVariant.Text" IconOnly IconName="@BitIconName.View" Title="查看切片" OnClick="WrapHandled(() => SelectDocument(item.Id))" />
+                                                            <BitButton Variant="BitVariant.Text" IconOnly IconName="@BitIconName.Edit" Title="编辑" OnClick="WrapHandled(() => BeginEditDocument(item))" />
+                                                            <BitButton Variant="BitVariant.Text" IconOnly Color="BitColor.Error" IconName="@BitIconName.Delete" Title="删除" OnClick="@(() => RequestDeleteDocument(item.Id))" />
+                                                        </div>
+                                                    </td>
+                                                </tr>
+                                            }
+                                        </tbody>
+                                    </table>
+                                    
+                                    @if (TotalDocumentPages > 1)
+                                    {
+                                        <div class="rag-pagination">
+                                            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.ChevronLeft" IsEnabled="@(documentCurrentPage > 1)" OnClick="WrapHandled(GoToPreviousPage)" />
+                                            <span class="rag-page-info">第 @documentCurrentPage 页，共 @TotalDocumentPages 页</span>
+                                            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.ChevronRight" IsEnabled="@(documentCurrentPage < TotalDocumentPages)" OnClick="WrapHandled(GoToNextPage)" />
+                                        </div>
+                                    }
+                                </div>
+                            }
+                        </BitPivotItem>
+
+                        <!-- Chunks Tab -->
+                        <BitPivotItem Key="@ChunksTabKey" HeaderText="切片预览">
+                            @if (selectedDocumentId is null)
+                            {
+                                <div class="rag-empty-state">
+                                    <BitIcon IconName="@BitIconName.CubeShape" Class="rag-empty-icon" />
+                                    <BitText>请先在左侧或文档列表中选择一个文档</BitText>
+                                </div>
+                            }
+                            else if (isLoadingChunks)
+                            {
+                                <div class="rag-loading-wrapper">
+                                    <div class="rag-chunk-grid" style="width: 100%;">
+                                        <BitShimmer Height="150px" />
+                                        <BitShimmer Height="150px" />
+                                        <BitShimmer Height="150px" />
+                                    </div>
+                                </div>
+                            }
+                            else if (chunks.Count == 0)
+                            {
+                                <div class="rag-empty-state">
+                                    <BitIcon IconName="@BitIconName.CubeShape" Class="rag-empty-icon" />
+                                    <BitText>该文档尚未生成切片</BitText>
+                                </div>
+                            }
+                            else
+                            {
+                                <div class="rag-chunk-header">
+                                    <BitText Typography="BitTypography.Subtitle2">文档：@documents.FirstOrDefault(d => d.Id == selectedDocumentId)?.Title</BitText>
+                                    <BitSpacer />
+                                    <BitText Typography="BitTypography.Subtitle2" Color="BitColor.SecondaryForeground">共 @chunks.Count 个切片</BitText>
+                                </div>
+                                <div class="rag-chunk-grid">
+                                    @foreach (var chunk in PaginatedChunks)
+                                    {
+                                        <div class="rag-chunk-card">
+                                            <div class="rag-chunk-card-header">
+                                                <span class="rag-badge">#@chunk.ChunkIndex</span>
+                                                <span class="rag-caption">@chunk.TokenCount tokens</span>
+                                            </div>
+                                            <div class="rag-chunk-card-body">
+                                                @chunk.Content
+                                            </div>
+                                        </div>
+                                    }
+                                </div>
+                                
+                                @if (TotalChunkPages > 1)
+                                {
+                                    <div class="rag-pagination" style="margin-top: 1.5rem; border: 1px solid var(--rag-border); border-radius: var(--rag-radius-sm);">
+                                        <BitButton Variant="BitVariant.Text" IconName="@BitIconName.ChevronLeft" IsEnabled="@(chunkCurrentPage > 1)" OnClick="WrapHandled(GoToPreviousChunkPage)" />
+                                        <span class="rag-page-info">第 @chunkCurrentPage 页，共 @TotalChunkPages 页</span>
+                                        <BitButton Variant="BitVariant.Text" IconName="@BitIconName.ChevronRight" IsEnabled="@(chunkCurrentPage < TotalChunkPages)" OnClick="WrapHandled(GoToNextChunkPage)" />
+                                    </div>
+                                }
+                            }
+                        </BitPivotItem>
+
+                        <!-- Debugger Tab -->
+                        <BitPivotItem Key="@DebuggerTabKey" HeaderText="召回调试">
+                            <div class="rag-debug-panel">
+                                <div class="rag-debug-form">
+                                    <div class="rag-debug-config">
+                                        <BitText Typography="BitTypography.Subtitle2" Class="rag-config-title">检索配置</BitText>
+                                        <div class="rag-sliders">
+                                            <div class="rag-slider-item">
+                                                <BitText Typography="BitTypography.Body2">向量权重：@((debugVectorWeight * 100).ToString("F0"))%</BitText>
+                                                <BitSlider @bind-Value="debugVectorWeight" Min="0" Max="1" Step="0.05" />
+                                            </div>
+                                            <div class="rag-slider-item">
+                                                <BitText Typography="BitTypography.Body2">关键词权重：@((debugKeywordWeight * 100).ToString("F0"))%</BitText>
+                                                <BitSlider @bind-Value="debugKeywordWeight" Min="0" Max="1" Step="0.05" />
+                                            </div>
+                                        </div>
+                                    </div>
+                                    <BitTextField @bind-Value="debugQuestion"
+                                                  Multiline
+                                                  Rows="3"
+                                                  Label="测试问题"
+                                                  Placeholder="输入测试问题，系统将模拟 RAG 流程进行检索..." />
+                                    <div class="rag-debug-form-actions">
+                                        <BitButton AutoLoading Class="rag-primary-btn" IconName="@BitIconName.Search" IsEnabled="string.IsNullOrWhiteSpace(debugQuestion) is false"
+                                                   OnClick="WrapHandled(RunDebugRetrieve)">
+                                            执行检索
+                                        </BitButton>
+                                    </div>
+                                </div>
+
+                                @if (isDebugging)
+                                {
+                                    <div class="rag-loading-wrapper">
+                                        <BitStack Gap="1.5rem" Style="width: 100%;">
+                                            <BitShimmer Height="4rem" />
+                                            <BitShimmer Height="12rem" />
+                                            <BitShimmer Height="12rem" />
+                                        </BitStack>
+                                    </div>
+                                }
+                                else if (retrievalDebugResult is not null)
+                                {
+                                    <div class="rag-debug-results">
+                                        <div class="rag-debug-summary">
+                                            <BitIcon IconName="@BitIconName.InfoSolid" />
+                                            <BitText Typography="BitTypography.Body2">
+                                                召回配置: 向量权重 @retrievalDebugResult.VectorWeight / 关键词权重 @retrievalDebugResult.KeywordWeight | 共返回 @retrievalDebugResult.CandidateCount 条结果
+                                            </BitText>
+                                        </div>
+
+                                        <BitText Typography="BitTypography.Subtitle1" Class="rag-section-title">Top Hits</BitText>
+                                        <div class="rag-hit-list">
+                                            @foreach (var hit in retrievalDebugResult.Hits)
+                                            {
+                                                <div class="rag-hit-item">
+                                                    <div class="rag-hit-scores">
+                                                        <span class="rag-score-badge @GetScoreBadgeClass(hit.Score)">综合分: @hit.Score.ToString("F4")</span>
+                                                        <span class="rag-score-badge @GetScoreBadgeClass(hit.VectorScore)">向量: @hit.VectorScore.ToString("F4")</span>
+                                                        <span class="rag-score-badge @GetScoreBadgeClass(hit.KeywordScore)">关键词: @hit.KeywordScore.ToString("F4")</span>
+                                                    </div>
+                                                    <div class="rag-hit-content">
+                                                        @((MarkupString)HighlightKeywords(hit.ContentPreview, debugQuestion))
+                                                    </div>
+                                                </div>
+                                            }
+                                        </div>
+
+                                        <BitAccordion Class="rag-context-accordion" NoBorder>
+                                            <HeaderTemplate>
+                                                <BitStack Horizontal VerticalAlign="BitAlignment.Center">
+                                                    <BitIcon IconName="@BitIconName.Code" />
+                                                    <BitText Typography="BitTypography.Subtitle1">查看合成上下文</BitText>
+                                                </BitStack>
+                                            </HeaderTemplate>
+                                            <ChildContent>
+                                                <div class="rag-context-preview">
+                                                    @retrievalDebugResult.ContextPreview
+                                                </div>
+                                            </ChildContent>
+                                        </BitAccordion>
+                                    </div>
+                                }
+                            </div>
+                        </BitPivotItem>
+                    </BitPivot>
+                </div>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Modals -->
+
+<BitModal @bind-IsOpen="isAddKnowledgeBaseModalOpen" IsBlocking Classes="@(new() { Root = "rag-modal-wrapper" })">
+    <div class="rag-modal">
+        <div class="rag-modal-header">
+            <BitText Typography="BitTypography.H6">新建知识库</BitText>
+            <BitSpacer />
+            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.Cancel" OnClick="CloseAddKnowledgeBaseModal" />
+        </div>
+        <div class="rag-modal-body">
+            <BitTextField @bind-Value="newKnowledgeBaseName" Label="知识库名称" Placeholder="如：研发知识库" Required="true" />
+            <BitTextField @bind-Value="newKnowledgeBaseCode" Label="唯一编码" Placeholder="如：dev-kb" Required="true" />
+            <BitTextField @bind-Value="newEmbeddingModel" Label="向量模型" Placeholder="shaw/dmeta-embedding-zh" />
+            <BitTextField @bind-Value="newEmbeddingDimension" Label="向量维度" Placeholder="768" />
+        </div>
+        <div class="rag-modal-footer">
+            <BitButton Variant="BitVariant.Outline" OnClick="CloseAddKnowledgeBaseModal">取消</BitButton>
+            <BitButton Class="rag-primary-btn" AutoLoading OnClick="WrapHandled(AddKnowledgeBase)">确定</BitButton>
+        </div>
+    </div>
+</BitModal>
+
+<BitModal @bind-IsOpen="isEditKnowledgeBaseModalOpen" IsBlocking Classes="@(new() { Root = "rag-modal-wrapper" })">
+    <div class="rag-modal">
+        <div class="rag-modal-header">
+            <BitText Typography="BitTypography.H6">编辑知识库</BitText>
+            <BitSpacer />
+            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.Cancel" OnClick="CloseEditKnowledgeBaseModal" />
+        </div>
+        <div class="rag-modal-body">
+            <BitTextField @bind-Value="editKnowledgeBaseName" Label="知识库名称" Required="true" />
+            <BitTextField @bind-Value="editKnowledgeBaseCode" Label="唯一编码" Required="true" />
+            <BitTextField @bind-Value="editKnowledgeBaseModel" Label="向量模型" />
+            <BitTextField @bind-Value="editKnowledgeBaseDimension" Label="向量维度" />
+        </div>
+        <div class="rag-modal-footer">
+            <BitButton Variant="BitVariant.Outline" OnClick="CloseEditKnowledgeBaseModal">取消</BitButton>
+            <BitButton Class="rag-primary-btn" AutoLoading OnClick="WrapHandled(UpdateCurrentKnowledgeBase)">保存</BitButton>
+        </div>
+    </div>
+</BitModal>
+
+<BitModal @bind-IsOpen="isDocumentModalOpen" IsBlocking Classes="@(new() { Root = "rag-modal-wrapper" })">
+    <div class="rag-modal rag-modal-large">
+        <div class="rag-modal-header">
+            <BitText Typography="BitTypography.H6">@(editingDocumentId is null ? "添加文档" : "编辑文档")</BitText>
+            <BitSpacer />
+            <BitButton Variant="BitVariant.Text" IconName="@BitIconName.Cancel" OnClick="CloseDocumentModal" />
+        </div>
+        <div class="rag-modal-body">
+            <div class="rag-form-grid">
+                <BitTextField @bind-Value="newDocumentTitle" Label="文档标题" Required="true" />
+                <BitDropdown @bind-Value="newDocumentSourceType" Label="来源类型" Items="documentSourceTypes" Required="true" />
+                <BitTextField @bind-Value="newDocumentSourceId" Label="来源标识 (ID/URL)" Placeholder="可留空自动生成" />
+            </div>
+            <BitTextField @bind-Value="newDocumentContent" Multiline Rows="8" Label="文档正文" Required="true" Placeholder="填入需要向量化的正文内容..." />
+        </div>
+        <div class="rag-modal-footer">
+            <BitButton Variant="BitVariant.Outline" OnClick="CloseDocumentModal">取消</BitButton>
+            <BitButton Class="rag-primary-btn" AutoLoading OnClick="WrapHandled(editingDocumentId is null ? AddDocument : SaveEditedDocument)">保存</BitButton>
+        </div>
+    </div>
+</BitModal>
+
+<BitProPanel @bind-IsOpen="isTutorialOpen" ShowCloseButton Modeless Classes="@(new() { Container = "rag-side-panel" })">
+    <Header>
+        <BitText Typography="BitTypography.H6">使用教程</BitText>
+    </Header>
+    <Body>
+        <div class="rag-panel-body">
+            <ul class="rag-tutorial-list">
+                <li>先在左侧新建知识库，设定向量模型。</li>
+                <li>进入“文档管理”，点击“添加文档”录入文本数据。</li>
+                <li>后台将自动对正文进行分片和向量化。</li>
+                <li>在“切片预览”中检查文本是否正确切分。</li>
+                <li>在“召回调试”中输入问题，测试召回准确率。</li>
+            </ul>
+            <div class="rag-panel-actions">
+                <BitButton Class="rag-primary-btn" OnClick="FillTutorialExample">一键填充测试数据</BitButton>
+            </div>
+        </div>
+    </Body>
+</BitProPanel>
+
+<BitProPanel @bind-IsOpen="isChunkingPanelOpen" ShowCloseButton Modeless Classes="@(new() { Container = "rag-side-panel" })">
+    <Header>
+        <BitText Typography="BitTypography.H6">分片规则配置</BitText>
+    </Header>
+    <Body>
+        @if (isLoadingChunkingOptions)
+        {
+            <div class="rag-loading-wrapper"><BitRollingSquareLoading Size="BitSize.Small" /></div>
+        }
+        else
+        {
+            <div class="rag-panel-body">
+                <BitNumberField @bind-Value="chunkMaxChunkLength" Min="100" Max="4000" Label="最大分片长度（字符）" />
+                <BitNumberField @bind-Value="chunkMinChunkCount" Min="1" Max="20" Label="最小分片数" />
+                <BitCheckbox @bind-Value="chunkPreferParagraphFirst" Label="优先按段落分片（按空行）" />
+                <BitText Typography="BitTypography.Subtitle2" Color="BitColor.SecondaryForeground">注：修改规则仅对新录入文档生效。</BitText>
+                
+                <div class="rag-panel-actions">
+                    <BitButton Class="rag-primary-btn" AutoLoading IsLoading="isSavingChunkingOptions" OnClick="WrapHandled(SaveChunkingOptions)">保存配置</BitButton>
+                </div>
+            </div>
+        }
+    </Body>
+</BitProPanel>
+
+<BitProPanel @bind-IsOpen="isRecyclePanelOpen" ShowCloseButton Modeless Classes="@(new() { Container = "rag-side-panel rag-recycle-panel" })">
+    <Header>
+        <BitText Typography="BitTypography.H6">回收站</BitText>
+    </Header>
+    <Body>
+        @if (isLoadingRecycleBin)
+        {
+            <div class="rag-loading-wrapper"><BitRollingSquareLoading Size="BitSize.Small" /></div>
+        }
+        else if (recycleBinItems.Count == 0)
+        {
+            <div class="rag-empty-state">
+                <BitIcon IconName="@BitIconName.RecycleBin" Class="rag-empty-icon-large" />
+                <BitText Typography="BitTypography.Subtitle1">回收站为空</BitText>
+                <BitText Typography="BitTypography.Body2" Color="BitColor.SecondaryForeground">没有被删除的知识库或文档</BitText>
+            </div>
+        }
+        else
+        {
+            <div class="rag-recycle-list">
+                @foreach (var item in recycleBinItems)
+                {
+                    <div class="rag-recycle-card">
+                        <div class="rag-recycle-info-group">
+                            <div class="rag-recycle-icon">
+                                <BitIcon IconName="@(item.ItemType == "KnowledgeBase" ? BitIconName.Database : BitIconName.PageList)" />
+                            </div>
+                            <div class="rag-recycle-info">
+                                <BitText Typography="BitTypography.Subtitle1" Class="rag-recycle-title">@item.Title</BitText>
+                                <BitText Typography="BitTypography.Body2" Color="BitColor.SecondaryForeground" Class="rag-recycle-meta">
+                                    @(item.ItemType == "KnowledgeBase" ? "知识库" : "文档") · 删除于 @item.DeletedOn.ToString("yyyy-MM-dd HH:mm")
+                                </BitText>
+                            </div>
+                        </div>
+                        <div class="rag-recycle-actions">
+                            <BitButton Variant="BitVariant.Outline" OnClick="WrapHandled(() => RestoreRecycleItem(item))">恢复</BitButton>
+                            <BitButton Variant="BitVariant.Outline" Color="BitColor.Error" OnClick="@(() => RequestPermanentlyDelete(item.ItemType, item.Id, item.Title))">永久删除</BitButton>
+                        </div>
+                    </div>
+                }
+            </div>
+        }
+    </Body>
+</BitProPanel>
+
+<BitDialog OnOk="WrapHandled(ConfirmDelete)"
+           OnCancel="CancelDeleteDialog"
+           @bind-IsOpen="isDeleteDialogOpen"
+           OkText="确认删除"
+           CancelText="取消"
+           Title="@deleteDialogTitle"
+           Message="@deleteDialogMessage" />

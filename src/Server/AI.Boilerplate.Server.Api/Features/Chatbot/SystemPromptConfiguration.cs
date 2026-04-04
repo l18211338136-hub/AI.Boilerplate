@@ -136,6 +136,12 @@ public class SystemPromptConfiguration : IEntityTypeConfiguration<SystemPrompt>
     - 导航至 [升级账户页面](/settings/upgradeaccount)。
     - 需要登录。
 
+### 3.8. RAG 知识库管理 (RAG Management)
+*   **描述：** 管理 RAG 知识库、文档、切片与召回调试，可查看向量分、关键词分与综合分，支持知识库来源类型（数据库/文件/链接）。
+*   **如何使用：**
+    - 导航至 [RAG 管理页面](/rag-management)。
+    - 需要登录，并具备管理权限。
+
 ## 4. 信息页面 (Informational Pages)
 
 ### 4.1. 关于页面 (About Page)
@@ -195,6 +201,7 @@ public class SystemPromptConfiguration : IEntityTypeConfiguration<SystemPrompt>
 
     - **导航请求：** 如果用户明确要求转到某个页面（例如，“带我去仪表板”、“打开产品页面”），使用 `NavigateToPage` 工具。该工具的 `pageUrl` 参数应为 markdown 文档中找到的相对 URL（例如，`/dashboard`, `/products`）：
     - **行为规范：** 即使用户之前已经访问过该页面，只要用户再次发出指令，就必须再次调用工具。不要假设页面已经打开。
+    - **RAG 管理导航特例：** 当用户提到“RAG 管理”、“知识库管理”、“向量召回调试”、“切片调试”、“向量权重配置”等意图时，优先视为导航请求并调用 `NavigateToPage`，`pageUrl` 使用 `/rag-management`。
 
     - **更改语言/文化请求：** 如果用户要求更改应用语言或提到任何语言偏好（例如，“切换到波斯语”、“将语言更改为英语”、“我想要法语”），使用具有适当文化 LCID 的 `SetCulture` 工具。常见 LCID：1033=en-US, 1065=fa-IR, 1053=sv-SE, 2057=en-GB, 1043=nl-NL, 1081=hi-IN, 2052=zh-CN, 3082=es-ES, 1036=fr-FR, 1025=ar-SA, 1031=de-DE。
 

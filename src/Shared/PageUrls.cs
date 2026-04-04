@@ -1,4 +1,4 @@
-﻿namespace AI.Boilerplate.Shared;
+namespace AI.Boilerplate.Shared;
 
 public static partial class PageUrls
 {
@@ -24,6 +24,8 @@ public static partial class PageUrls
     public const string Todo = "/todo";
 
     public const string SystemPrompts = "/system-prompts";
+
+    public const string RagManagement = "/rag-management";
 
     public const string Roles = "/user-groups";
 

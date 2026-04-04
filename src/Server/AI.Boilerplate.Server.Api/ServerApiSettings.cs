@@ -1,4 +1,4 @@
-﻿using AdsPush.Abstraction.Settings;
+using AdsPush.Abstraction.Settings;
 using System.Text;
 using AI.Boilerplate.Server.Shared;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
@@ -41,6 +41,10 @@ public partial class ServerApiSettings : ServerSharedSettings
 
     public SupportedAppVersionsOptions? SupportedAppVersions { get; set; }
 
+    public RagRetrievalOptions RagRetrieval { get; set; } = new();
+
+    public RagChunkingOptions RagChunking { get; set; } = new();
+
     public override IEnumerable<ValidationResult> Validate(ValidationContext validationContext)
     {
         var validationResults = base.Validate(validationContext).ToList();
@@ -65,6 +69,8 @@ public partial class ServerApiSettings : ServerSharedSettings
         {
             Validator.TryValidateObject(SupportedAppVersions, new ValidationContext(SupportedAppVersions), validationResults, true);
         }
+        Validator.TryValidateObject(RagRetrieval, new ValidationContext(RagRetrieval), validationResults, true);
+        Validator.TryValidateObject(RagChunking, new ValidationContext(RagChunking), validationResults, true);
 
         const int MinimumJwtIssuerSigningKeySecretByteLength = 64; // 512 bits = 64 bytes, minimum for HS512
         var jwtIssuerSigningKeySecretByteLength = Encoding.UTF8.GetBytes(Identity.JwtIssuerSigningKeySecret).Length;
@@ -239,4 +245,33 @@ public class SupportedAppVersionsOptions
             _ => throw new ArgumentOutOfRangeException(nameof(platformType), platformType, null)
         };
     }
+}
+
+public class RagRetrievalOptions
+{
+    [Range(0, 1)]
+    public double VectorWeight { get; set; } = 0.85;
+
+    [Range(0, 1)]
+    public double KeywordWeight { get; set; } = 0.15;
+
+    [Range(1, 20)]
+    public int MaxTopK { get; set; } = 20;
+
+    [Range(1, 20)]
+    public int CandidateMultiplier { get; set; } = 5;
+
+    [Range(1, 100)]
+    public int CandidateCap { get; set; } = 100;
+}
+
+public class RagChunkingOptions
+{
+    [Range(100, 4000)]
+    public int MaxChunkLength { get; set; } = 450;
+
+    public bool PreferParagraphFirst { get; set; } = true;
+
+    [Range(1, 20)]
+    public int MinChunkCount { get; set; } = 1;
 }

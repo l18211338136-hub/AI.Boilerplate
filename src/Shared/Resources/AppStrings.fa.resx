@@ -1310,4 +1310,97 @@
     <data name="ImageNotCarError" xml:space="preserve">
     <value>تصویر ارائه شده حاوی ماشین نیست.</value>
   </data>
+  <data name="RagManagementTitle" xml:space="preserve">
+    <value>RAG Management</value>
+  </data>
+  <data name="RagManagementPageTitle" xml:space="preserve">
+    <value>Manage RAG Knowledge Bases</value>
+  </data>
+  <data name="RagManagementSubTitle" xml:space="preserve">
+    <value>Manage knowledge bases, documents, chunks, and retrieval debugging</value>
+  </data>
+  <data name="KnowledgeBases" xml:space="preserve">
+    <value>Knowledge bases</value>
+  </data>
+  <data name="RagEmbeddingModel" xml:space="preserve">
+    <value>Embedding model</value>
+  </data>
+  <data name="RagEmbeddingDimension" xml:space="preserve">
+    <value>Embedding dimension</value>
+  </data>
+  <data name="RagAddKnowledgeBase" xml:space="preserve">
+    <value>Add knowledge base</value>
+  </data>
+  <data name="RagNoKnowledgeBaseMessage" xml:space="preserve">
+    <value>No knowledge base</value>
+  </data>
+  <data name="RagKnowledgeBaseNamePlaceholder" xml:space="preserve">
+    <value>Knowledge base name</value>
+  </data>
+  <data name="RagDocumentsAndChunks" xml:space="preserve">
+    <value>Documents: {0}, Chunks: {1}</value>
+  </data>
+  <data name="RagSelectKnowledgeBaseFirst" xml:space="preserve">
+    <value>Please select a knowledge base first</value>
+  </data>
+  <data name="RagSourceType" xml:space="preserve">
+    <value>Source type</value>
+  </data>
+  <data name="RagSourceId" xml:space="preserve">
+    <value>Source ID</value>
+  </data>
+  <data name="RagAddDocument" xml:space="preserve">
+    <value>Add document</value>
+  </data>
+  <data name="RagNoDocumentMessage" xml:space="preserve">
+    <value>No document</value>
+  </data>
+  <data name="RagChunksCount" xml:space="preserve">
+    <value>Chunks: {0}</value>
+  </data>
+  <data name="RagViewChunks" xml:space="preserve">
+    <value>View chunks</value>
+  </data>
+  <data name="RagChunks" xml:space="preserve">
+    <value>Chunks</value>
+  </data>
+  <data name="RagSelectDocumentFirst" xml:space="preserve">
+    <value>Please select a document first</value>
+  </data>
+  <data name="RagNoChunkMessage" xml:space="preserve">
+    <value>No chunk</value>
+  </data>
+  <data name="RagRetrievalDebugger" xml:space="preserve">
+    <value>Retrieval debugger</value>
+  </data>
+  <data name="RagDebugQuestionPlaceholder" xml:space="preserve">
+    <value>Example: Show active users grouped by role in the last 30 days</value>
+  </data>
+  <data name="RagRunDebugRetrieve" xml:space="preserve">
+    <value>Run debug retrieve</value>
+  </data>
+  <data name="RagNoDebugResultMessage" xml:space="preserve">
+    <value>No debug result yet</value>
+  </data>
+  <data name="RagTopHits" xml:space="preserve">
+    <value>Top hits</value>
+  </data>
+  <data name="RagContextPreview" xml:space="preserve">
+    <value>Context preview</value>
+  </data>
+  <data name="RagVectorizationEnabled" xml:space="preserve">
+    <value>Vector retrieval enabled</value>
+  </data>
+  <data name="RagWeightsSummary" xml:space="preserve">
+    <value>Weights · Vector: {0:P0}, Keyword: {1:P0}, Candidates: {2}</value>
+  </data>
+  <data name="RagFinalScore" xml:space="preserve">
+    <value>Final</value>
+  </data>
+  <data name="RagVectorScore" xml:space="preserve">
+    <value>Vector</value>
+  </data>
+  <data name="RagKeywordScore" xml:space="preserve">
+    <value>Keyword</value>
+  </data>
 </root>

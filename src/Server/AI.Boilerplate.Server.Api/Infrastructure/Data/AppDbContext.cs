@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Server.Api.Features.Products;
+using AI.Boilerplate.Server.Api.Features.Products;
 using AI.Boilerplate.Server.Api.Features.Categories;
 using AI.Boilerplate.Server.Api.Features.Todo;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
@@ -7,6 +7,7 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using AI.Boilerplate.Server.Api.Features.PushNotification;
 using Hangfire.EntityFrameworkCore;
 using AI.Boilerplate.Server.Api.Features.Attachments;
+using AI.Boilerplate.Server.Api.Features.Rag;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.Data;
@@ -26,6 +27,14 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<SystemPrompt> SystemPrompts { get; set; } = default!;
 
     public DbSet<Attachment> Attachments { get; set; } = default!;
+
+    public DbSet<RagKnowledgeBase> RagKnowledgeBases { get; set; } = default!;
+
+    public DbSet<RagDocument> RagDocuments { get; set; } = default!;
+
+    public DbSet<RagChunk> RagChunks { get; set; } = default!;
+
+    public DbSet<RagChunkingSetting> RagChunkingSettings { get; set; } = default!;
 
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
 

@@ -3,6 +3,7 @@ using System;
 using AI.Boilerplate.Server.Api.Infrastructure.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using Pgvector;
@@ -12,9 +13,11 @@ using Pgvector;
 namespace AI.Boilerplate.Server.Api.Migrations
 {
     [DbContext(typeof(AppDbContext))]
-    partial class AppDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260404082132_SyncPendingModelChanges")]
+    partial class SyncPendingModelChanges
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
@@ -1507,43 +1510,6 @@ namespace AI.Boilerplate.Server.Api.Migrations
                     b.ToTable("RagChunks");
                 });
 
-            modelBuilder.Entity("AI.Boilerplate.Server.Api.Features.Rag.RagChunkingSetting", b =>
-                {
-                    b.Property<Guid>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("uuid");
-
-                    b.Property<int>("MaxChunkLength")
-                        .HasColumnType("integer")
-                        .HasComment("最大分片长度");
-
-                    b.Property<int>("MinChunkCount")
-                        .HasColumnType("integer")
-                        .HasComment("最小分片数");
-
-                    b.Property<bool>("PreferParagraphFirst")
-                        .HasColumnType("boolean")
-                        .HasComment("是否优先按段落分片");
-
-                    b.Property<DateTimeOffset>("UpdatedAt")
-                        .HasColumnType("timestamp with time zone")
-                        .HasComment("更新时间");
-
-                    b.Property<uint>("Version")
-                        .IsConcurrencyToken()
-                        .ValueGeneratedOnAddOrUpdate()
-                        .HasColumnType("xid")
-                        .HasColumnName("xmin")
-                        .HasComment("并发版本");
-
-                    b.HasKey("Id");
-
-                    b.ToTable("RagChunkingSettings", t =>
-                        {
-                            t.HasComment("RAG 分片规则配置");
-                        });
-                });
-
             modelBuilder.Entity("AI.Boilerplate.Server.Api.Features.Rag.RagDocument", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1552,12 +1518,6 @@ namespace AI.Boilerplate.Server.Api.Migrations
 
                     b.Property<DateTimeOffset>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
-
-                    b.Property<DateTimeOffset?>("DeletedOn")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
 
                     b.Property<Guid>("KnowledgeBaseId")
                         .HasColumnType("uuid");
@@ -1605,9 +1565,6 @@ namespace AI.Boilerplate.Server.Api.Migrations
                     b.Property<DateTimeOffset>("CreatedOn")
                         .HasColumnType("timestamp with time zone");
 
-                    b.Property<DateTimeOffset?>("DeletedOn")
-                        .HasColumnType("timestamp with time zone");
-
                     b.Property<int>("EmbeddingDimension")
                         .HasColumnType("integer");
 
@@ -1615,9 +1572,6 @@ namespace AI.Boilerplate.Server.Api.Migrations
                         .IsRequired()
                         .HasMaxLength(128)
                         .HasColumnType("character varying(128)");
-
-                    b.Property<bool>("IsDeleted")
-                        .HasColumnType("boolean");
 
                     b.Property<bool>("IsEnabled")
                         .HasColumnType("boolean");

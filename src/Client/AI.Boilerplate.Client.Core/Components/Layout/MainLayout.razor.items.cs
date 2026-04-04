@@ -125,12 +125,21 @@ public partial class MainLayout
 
             if (manageAiPrompt)
             {
-                managementItem.ChildItems.Add(new()
-                {
-                    Text = localizer[nameof(AppStrings.SystemPromptsTitle)],
-                    IconName = BitIconName.TextDocumentSettings,
-                    Url = PageUrls.SystemPrompts,
-                });
+                managementItem.ChildItems.AddRange(
+                [
+                    new()
+                    {
+                        Text = localizer[nameof(AppStrings.SystemPromptsTitle)],
+                        IconName = BitIconName.TextDocumentSettings,
+                        Url = PageUrls.SystemPrompts,
+                    },
+                    new()
+                    {
+                        Text = localizer[nameof(AppStrings.RagManagementTitle)],
+                        IconName = BitIconName.Database,
+                        Url = PageUrls.RagManagement,
+                    }
+                ]);
             }
         }
 

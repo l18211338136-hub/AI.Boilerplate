@@ -1,4 +1,4 @@
-﻿﻿using System.Net;
+﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -31,6 +31,7 @@ using AI.Boilerplate.Server.Api.Infrastructure.RequestPipeline;
 using AI.Boilerplate.Server.Api.Features.PushNotification;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
 using AI.Boilerplate.Server.Api.Features.Products;
+using AI.Boilerplate.Server.Api.Features.Rag;
 
 namespace AI.Boilerplate.Server.Api;
 
@@ -58,6 +59,7 @@ public static partial class Program
         services.AddScoped<EmailServiceJobsRunner>();
         services.AddScoped<PhoneService>();
         services.AddScoped<PhoneServiceJobsRunner>();
+        services.AddScoped<RagManagementStore>();
         // Add MCP server with chatbot tools
         services.AddMcpServer()
             .WithHttpTransport()

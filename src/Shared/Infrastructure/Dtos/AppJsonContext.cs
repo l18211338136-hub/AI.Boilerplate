@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Shared.Features.Todo;
+using AI.Boilerplate.Shared.Features.Todo;
 using AI.Boilerplate.Shared.Features.Dashboard;
 using AI.Boilerplate.Shared.Features.Products;
 using AI.Boilerplate.Shared.Features.Categories;
@@ -6,6 +6,7 @@ using AI.Boilerplate.Shared.Features.Chatbot;
 using AI.Boilerplate.Shared.Infrastructure.Dtos.SignalR;
 using AI.Boilerplate.Shared.Features.Statistics;
 using AI.Boilerplate.Shared.Features.Diagnostic;
+using AI.Boilerplate.Shared.Features.Rag.Dtos;
 
 namespace AI.Boilerplate.Shared.Infrastructure.Dtos;
 
@@ -52,6 +53,18 @@ namespace AI.Boilerplate.Shared.Infrastructure.Dtos;
 [JsonSerializable(typeof(DiagnosticLogDto[]))]
 [JsonSerializable(typeof(StartChatRequest))]
 [JsonSerializable(typeof(List<SystemPromptDto>))]
+[JsonSerializable(typeof(RagKnowledgeBaseDto))]
+[JsonSerializable(typeof(List<RagKnowledgeBaseDto>))]
+[JsonSerializable(typeof(RagKnowledgeBaseUpsertDto))]
+[JsonSerializable(typeof(RagDocumentDto))]
+[JsonSerializable(typeof(List<RagDocumentDto>))]
+[JsonSerializable(typeof(RagDocumentUpsertDto))]
+[JsonSerializable(typeof(RagChunkDto))]
+[JsonSerializable(typeof(List<RagChunkDto>))]
+[JsonSerializable(typeof(RagRetrievalDebugRequestDto))]
+[JsonSerializable(typeof(RagRetrievalDebugResultDto))]
+[JsonSerializable(typeof(RagChunkingOptionsDto))]
+[JsonSerializable(typeof(List<RagRecycleBinItemDto>))]
 [JsonSerializable(typeof(BackgroundJobProgressDto))]
 public partial class AppJsonContext : JsonSerializerContext
 {
