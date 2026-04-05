@@ -78,7 +78,7 @@ public partial class AppChatbot
     [McpServerTool(Name = nameof(PgGenerateDashboard))]
     private async Task<string> PgGenerateDashboard(
         [Required, Description("报表需求自然语言描述，例如：统计各分类产品数量及价格分布")] string requirement,
-        [Description("提取用户关于页面长相的所有关键词，严禁遗漏。必须包含：1.视觉风格（如：赛博朋克、科技感等视觉风格）；2.布局形态（如：大屏、仪表盘、卡片、表格等布局形态）；3.动画特效（如：动态效果、流光、过渡动画等动画特效）。注意：'大屏'是布局要求，必须提取！请将所有关键词用逗号拼接。若无则返回空字符串。")] string? visualStyle = null,
+        [Description("提取用户关于页面长相的所有视觉描述词，严禁遗漏。输出必须包含以下三类，且保留原文中的修饰细节：1.视觉风格：提取整体氛围（如：赛博朋克、科技感）及具体的视觉修饰词（如：霓虹、全息、透明、磨砂等）。2.布局与形态：提取整体架构（如：大屏、仪表盘）及组件的具体形状（如：六边形、圆形、卡片、网格、悬浮等）。注意：如果用户指定了特殊形状（如六边形等），必须原样提取，不可忽略！3.动画特效：提取所有动态描述（如：流光、过渡动画、展开动画、波形）。输出规则：请将所有提取到的关键词用逗号拼接;保持原文用词（例如用户说“霓虹波形”，就提取“霓虹波形”等）；若无相关描述，返回空字符串。")] string? visualStyle = null,
         [Description("最大返回行数。除非用户指定，否则不要传此参数")] int limit = 1000)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgGenerateDashboard)}");
