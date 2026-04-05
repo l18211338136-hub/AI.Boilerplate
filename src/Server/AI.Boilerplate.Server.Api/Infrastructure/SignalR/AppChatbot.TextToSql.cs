@@ -1,10 +1,12 @@
 ﻿﻿using System.ComponentModel;
-using ModelContextProtocol.Server;
 using System.Data.Common;
+using System.Text;
 using System.Text.RegularExpressions;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
+using ModelContextProtocol.Server;
 using Npgsql;
-using Microsoft.Extensions.AI;
+using Pgvector;
+using Pgvector.EntityFrameworkCore;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 
@@ -29,7 +31,8 @@ public partial class AppChatbot
             var userId = await EnsureCurrentUserIdIsPresent();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
-            var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+            //var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+            var schemaSummary = await RetrieveSchemaContextAsync(reportRequirement, CancellationToken.None);
 
             var firstSql = await GenerateTextToSqlAsync(reportRequirement, schemaSummary, userId, null, CancellationToken.None);
 
@@ -75,6 +78,7 @@ public partial class AppChatbot
     [McpServerTool(Name = nameof(PgGenerateDashboard))]
     private async Task<string> PgGenerateDashboard(
         [Required, Description("报表需求自然语言描述，例如：统计各分类产品数量及价格分布")] string requirement,
+        [Description("提取用户关于页面长相的所有关键词，严禁遗漏。必须包含：1.视觉风格（如：赛博朋克、科技感等视觉风格）；2.布局形态（如：大屏、仪表盘、卡片、表格等布局形态）；3.动画特效（如：动态效果、流光、过渡动画等动画特效）。注意：'大屏'是布局要求，必须提取！请将所有关键词用逗号拼接。若无则返回空字符串。")] string? visualStyle = null,
         [Description("最大返回行数。除非用户指定，否则不要传此参数")] int limit = 1000)
     {
         Console.WriteLine($"\n[AI Tool Called]: {nameof(PgGenerateDashboard)}");
@@ -85,7 +89,8 @@ public partial class AppChatbot
             var userId = await EnsureCurrentUserIdIsPresent();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
-            var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+            //var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+            var schemaSummary = await RetrieveSchemaContextAsync(requirement, CancellationToken.None);
 
             var firstSql = await GenerateTextToSqlAsync(requirement, schemaSummary, userId, null, CancellationToken.None);
             
@@ -103,7 +108,12 @@ public partial class AppChatbot
                 jsonResult = JsonSerializer.Serialize(secondResult.rows, _jsonSerializerOptions);
             }
 
-            var html = await GenerateDashboardHtmlAsync(requirement, jsonResult, CancellationToken.None);
+            // 生成 HTML 时，将风格描述拼接到提示词中
+            var htmlPrompt = string.IsNullOrWhiteSpace(visualStyle)
+                ? requirement
+                : $"{requirement}。视觉风格要求：{visualStyle}";
+
+            var html = await GenerateDashboardHtmlAsync(htmlPrompt, jsonResult, CancellationToken.None);
             return $"```html\n{html}\n```";
         }
         catch (Exception exp)
@@ -267,7 +277,8 @@ public partial class AppChatbot
             var userId = await EnsureCurrentUserIdIsPresent();
             var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             var connection = await OpenAppDbConnectionAsync(db, CancellationToken.None);
-            var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+            //var schemaSummary = await BuildSchemaSummaryAsync(connection, CancellationToken.None);
+            var schemaSummary = await RetrieveSchemaContextAsync(writeRequirement, CancellationToken.None);
             var accessibleTables = await LoadAccessibleTablesAsync(connection, CancellationToken.None);
             var safeMaxAffectedRows = Math.Clamp(maxAffectedRows, 1, 200);
 
@@ -1301,6 +1312,198 @@ public partial class AppChatbot
         return grouped.Values.ToList();
     }
 
+    /// <summary>
+    /// 基于 RAG 检索相关的数据库 Schema 上下文。
+    /// 使用混合检索（向量+关键词）获取最相关的表结构。
+    /// </summary>
+    private async Task<string> RetrieveSchemaContextAsync(string userQuestion, CancellationToken cancellationToken)
+    {
+        cancellationToken.ThrowIfCancellationRequested();
+
+        if (string.IsNullOrWhiteSpace(userQuestion))
+            throw new ArgumentException("问题不能为空", nameof(userQuestion));
+
+        // 1. 检查知识库是否存在 (参考代码逻辑)
+        var exists = await dbContext.RagKnowledgeBases
+            .AnyAsync(k => k.IsDeleted == false, cancellationToken);
+
+        if (!exists)
+            throw new ResourceNotFoundException($"知识库不存在");
+
+        // 2. 生成向量与分词 (参考代码逻辑)
+        var questionEmbedding = await embeddingGenerator.GenerateAsync(userQuestion, cancellationToken: cancellationToken);
+        var queryVector = new Vector(Normalize(questionEmbedding.Vector.ToArray()));
+        var queryKeywords = Tokenize(userQuestion);
+
+        // 3. 配置检索参数 (这里假设你有类似的配置对象，或者直接硬编码默认值)
+        // 为了演示，我直接定义默认值，你可以根据实际情况替换为 serverApiSettings.RagRetrieval
+        var ragOptions = new
+        {
+            MaxTopK = 10,
+            CandidateMultiplier = 4, // 候选集倍数
+            CandidateCap = 50,       // 候选集上限
+            VectorWeight = 0.85,     // 向量默认权重
+            KeywordWeight = 0.15     // 关键词默认权重
+        };
+
+        // 假设我们固定取 Top 3 个表结构作为上下文，或者你可以将其作为参数传入
+        var topK = 5;
+        var candidateCount = Math.Clamp(topK * ragOptions.CandidateMultiplier, topK, ragOptions.CandidateCap);
+
+        var vectorWeight = ragOptions.VectorWeight;
+        var keywordWeight = ragOptions.KeywordWeight;
+
+        // 4. 获取候选集 (先取 CandidateCount 个向量最相似的)
+        var candidates = await dbContext.RagChunks
+            .AsNoTracking()
+            .Where(c => c.Document.IsDeleted == false
+                        && c.Embedding != null)
+            .OrderBy(c => c.Embedding!.CosineDistance(queryVector))
+            .ThenBy(c => c.ChunkIndex) // 保持原有的排序稳定性
+            .Take(candidateCount)
+            .Select(c => new
+            {
+                c.Id,
+                c.Content,
+                Distance = c.Embedding!.CosineDistance(queryVector)
+            })
+            .ToListAsync(cancellationToken);
+
+        // 5. 混合打分与重排序 (参考代码逻辑：完全复刻打分公式)
+        var hits = candidates
+            .Select(c =>
+            {
+                var vectorScore = Math.Clamp(1 - c.Distance, 0, 1);
+                var keywordScore = ComputeKeywordScore(c.Content, queryKeywords);
+
+                // 核心公式：加权总分
+                var finalScore = (vectorScore * vectorWeight) + (keywordScore * keywordWeight);
+
+                return new
+                {
+                    c.Content,
+                    Score = finalScore
+                };
+            })
+            .OrderByDescending(h => h.Score) // 按加权分数重新排序
+            .Take(topK) // 最终只取 Top K
+            .ToList();
+
+        // 6. 构建最终上下文字符串
+        if (!hits.Any())
+        {
+            return "未找到相关的表结构信息。";
+        }
+
+        var contextBuilder = new StringBuilder();
+        foreach (var hit in hits)
+        {
+            Console.WriteLine($"hit:{ hit.Content}");
+            contextBuilder.AppendLine("---");
+            contextBuilder.AppendLine(hit.Content);
+        }
+
+        var schema = await FilterSchemaAsync(userQuestion, contextBuilder.ToString(), cancellationToken);
+
+        return schema;
+    }
+
+    /// <summary>
+    /// 根据用户问题，利用 AI 筛选出相关的数据库 Schema 信息。
+    /// 移除无关的表，只保留生成 SQL 所需的上下文。
+    /// </summary>
+    private async Task<string> FilterSchemaAsync(
+        string userQuestion,
+        string fullSchemaMarkdown,
+        CancellationToken cancellationToken)
+    {
+        if (serviceProvider.GetService<IChatClient>() is not IChatClient chatClient)
+            throw new ResourceNotFoundException("IChatClient is not available.");
+
+        var filterAgent = chatClient.AsAIAgent(
+            instructions: """
+        你是一个严格的数据库上下文裁剪工具。
+        你的任务是根据用户问题，从提供的“全量 Schema”中**筛选**出相关的表，并**原样保留**这些表的完整定义。
+
+        ### 核心指令（必须遵守）：
+        1. **禁止摘要/重写**：绝对不要把 Markdown 表格转换成自然语言描述。输出的表结构必须与输入中的 Markdown 格式**完全一致**。
+        2. **原文摘录**：输出内容必须是输入内容的**子集**。只删除不需要的表，保留需要的表的**所有**原始文本。
+        3. **外键级联（强制执行）**：
+           - 在决定是否保留某个表（如 `Products`）时，**必须**检查该表下方的 `### 关联关系` 部分。
+           - 如果该表通过外键引用了其他表，**必须无条件保留被引用的表**。
+        4. **中间表/关联表保留（关键）**：
+           - 如果用户的问题涉及两个实体（例如“查询订单包含哪些产品”），且这两个实体通过一个**中间表**（如 `OrderDetails`）进行连接，**必须保留该中间表**。
+           - **识别特征**：中间表通常包含多个外键，分别指向两个主要实体（例如 `OrderId` 指向 `Orders`，`ProductId` 指向 `Products`）。
+           - **规则**：如果你保留了表 A 和表 B，且存在一个表 C 同时关联了 A 和 B，请务必保留表 C，即使问题中没有明确提到表 C 的名字。
+        5. **格式保持**：不要修改表名前的 `public"."` 前缀，不要修改字段名的大小写。
+
+        ### 错误示例（绝对不要这样做）：
+        - 错误：保留了 `Orders` 和 `Products`，但删除了 `OrderDetails`（导致无法 JOIN）。
+        - 错误：保留了 `Orders` 表，但删除了 `Users` 表，即使 `Orders` 有 `UserId` 外键。
+        - 错误：将表结构总结为“产品表包含ID和名称”。
+
+        ### 正确示例：
+        （直接输出类似以下的完整 Markdown 块）
+        # 数据库表结构: public.Orders
+        ...
+        ### 关联关系 (外键)
+         - `UserId` 关联到 * *public.Users**
+
+        # 数据库表结构: public.Users
+        ...
+
+        # 数据库表结构: public.OrderDetails
+        ...
+        ### 关联关系 (外键)
+         - `OrderId` 关联到 * *public.Orders**
+         - `ProductId` 关联到 * *public.Products**
+        """,
+            name: "SchemaFilterAgent",
+            description: "Filters irrelevant tables from schema context based on user question");
+
+        ChatOptions chatOptions = new()
+        {
+            Temperature = 0.0f, // 极低温度，确保它不敢乱改表名
+        };
+
+        // 绑定配置
+        configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
+
+        // 使用通用的 Chat 模型
+        var chatModelId = configuration["AI:OpenAI:ChatModel"] ?? configuration["AI:AzureOpenAI:ChatModel"];
+        if (!string.IsNullOrWhiteSpace(chatModelId))
+        {
+            chatOptions.ModelId = chatModelId;
+        }
+
+        var prompt = $"""
+        用户问题：
+        {userQuestion}
+
+        全量数据库 Schema（注意：保留的表必须包含 `public"."` 前缀和双引号）：
+        {fullSchemaMarkdown}
+        """;
+        Console.WriteLine($"fullSchemaMarkdown:{fullSchemaMarkdown}");
+        // 执行 AI 调用
+        var response = await filterAgent.RunAsync<string>(
+            messages: [new(ChatRole.User, prompt)],
+            cancellationToken: cancellationToken,
+            options: new Microsoft.Agents.AI.ChatClientAgentRunOptions(chatOptions));
+
+        var filteredSchema = response.Result?.Trim();
+
+        if (string.IsNullOrWhiteSpace(filteredSchema))
+        {
+            // 如果 AI 认为没有表相关（极少见），可以返回一个提示，或者抛出异常
+            // 这里为了健壮性，如果 AI 返回空，我们可以选择返回原 Schema 或者空字符串让后续步骤报错
+            Console.WriteLine("[Schema Filter]: AI returned empty schema.");
+            return fullSchemaMarkdown;
+        }
+
+        Console.WriteLine( $"\n[Schema Filter]: Successfully filtered schema. Length: {filteredSchema.Length}");
+        return filteredSchema;
+    }
+
     [GeneratedRegex(@"\bINSERT\s+INTO\s+(?<id>(?:(?:""[^""]+""|\w+)\.)?(?:""[^""]+""|\w+))", RegexOptions.IgnoreCase)]
     private static partial Regex InsertTableRegex();
 
@@ -1558,5 +1761,45 @@ public partial class AppChatbot
             result.Add(sb.ToString().Trim());
 
         return result;
+    }
+
+    private static float[] Normalize(float[] vector)
+    {
+        var sum = 0d;
+        for (var i = 0; i < vector.Length; i++)
+        {
+            sum += vector[i] * vector[i];
+        }
+
+        var norm = Math.Sqrt(sum);
+        if (norm <= 0)
+            return vector;
+
+        for (var i = 0; i < vector.Length; i++)
+        {
+            vector[i] = (float)(vector[i] / norm);
+        }
+
+        return vector;
+    }
+
+    private static HashSet<string> Tokenize(string text)
+    {
+        return [.. text.Split([' ', ',', '.', ';', ':', '-', '_', '/', '\\', '\n', '\r', '\t'], StringSplitOptions.RemoveEmptyEntries)
+                       .Select(t => t.Trim().ToLowerInvariant())
+                       .Where(t => t.Length > 1)];
+    }
+
+    private static double ComputeKeywordScore(string content, HashSet<string> queryKeywords)
+    {
+        if (queryKeywords.Count == 0 || string.IsNullOrWhiteSpace(content))
+            return 0;
+
+        var chunkKeywords = Tokenize(content);
+        if (chunkKeywords.Count == 0)
+            return 0;
+
+        var matched = queryKeywords.Count(chunkKeywords.Contains);
+        return (double)matched / queryKeywords.Count;
     }
 }

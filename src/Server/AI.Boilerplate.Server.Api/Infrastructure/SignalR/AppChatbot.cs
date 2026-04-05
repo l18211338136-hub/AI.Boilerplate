@@ -27,6 +27,7 @@ public partial class AppChatbot
     [AutoInject] private IConfiguration configuration = default!;
     [AutoInject] private IServiceProvider serviceProvider = default!;
     [AutoInject] private IOptionsMonitor<BearerTokenOptions> bearerTokenOptions = default!;
+    [AutoInject] private IEmbeddingGenerator<string, Embedding<float>> embeddingGenerator = default!;
 
     private string? variablesDefault;
     private string? supportSystemPrompt;
