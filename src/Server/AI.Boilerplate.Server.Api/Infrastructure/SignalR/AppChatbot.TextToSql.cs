@@ -294,7 +294,7 @@ public partial class AppChatbot
                     affectedRows = firstResult.affectedRows
                 }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlWrite Result]: {jsonResult}");
-                return $"【系统强制指令：执行成功！】数据已生效。请立即停止调用此工具，并且只对用户输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取、联想或翻译任何字段！";
+                return "执行成功！数据已更新，请刷新页面。";
             }
             catch (Exception firstExp)
             {
@@ -309,7 +309,7 @@ public partial class AppChatbot
                     affectedRows = secondResult.affectedRows
                 }, _jsonSerializerOptions);
                 Console.WriteLine($"\n[PgTextToSqlWrite Result (Retry)]: {jsonResult}");
-                return $"【系统强制指令：执行成功！】(经过自动重试后生效) 数据已生效。请立即停止调用此工具，并且只对用户输出这句话：'执行成功！数据已更新，请刷新页面。'。绝对不要输出 markdown 表格，绝对不要提取、联想或翻译任何字段！";
+                return "执行成功！数据已更新，请刷新页面。";
             }
         }
         catch (Exception exp)
@@ -595,28 +595,28 @@ public partial class AppChatbot
             throw new ResourceNotFoundException("IChatClient is not available.");
 
         var sqlAgent = chatClient.AsAIAgent(
-            instructions: """
-            你是 PostgreSQL 写入 SQL 生成器。
-            目标：根据用户需求和给定 schema 生成可执行的数据变更 SQL。
-
-            约束：
-            1) 只允许 INSERT/UPDATE/DELETE；
-            2) 只生成一条 SQL，不允许分号分隔多语句；
-            3) 严禁 DDL（CREATE/ALTER/DROP/TRUNCATE 等）；
-            4) UPDATE/DELETE 必须带 WHERE；
-            5) 表名和字段名必须严格、100%来自给定的 schema。绝对不要凭空捏造字段名！如果用户说“类别是BMW”，而表中只有 `CategoryId`，你绝对不能生成 `CategoryName` 这个字段！必须使用子查询去查出对应的 ID 并赋给 `CategoryId` 字段。
-            6) 若需求不清晰，做最保守的精确变更，不做全表操作。
-            7) 所有的表名和列名（包括 INSERT 列表、UPDATE SET 列表和 WHERE 条件中的列名）都必须使用双引号包裹，以保证大小写精确匹配（例如：UPDATE "public"."TodoItems" SET "IsDone" = true WHERE "Id" = '...'）。不要使用未带双引号的标识符。
-            8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译。
-            9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请不要在 WHERE 条件中加入 UserId 的过滤！
-            10) 必须根据提供的 schema 数据类型生成正确的语法：更新或插入 uuid、字符串、日期字段时必须使用单引号（'）包裹值；更新布尔值请使用 true/false；更新数值请直接写数字。
-            11) 严禁凭空伪造外键 UUID 值！如果需要关联其他表的数据，必须使用子查询去获取真实的 ID。注意：在使用子查询匹配外键时，如果目标字段可能是外键（比如 Categories 表的 Name 字段），请尽量使用 ILIKE 模糊匹配（例如 ILIKE '%BMW%'），以防止因用户输入的名称不完全精确而导致子查询返回 NULL，进而引发外键字段 not-null constraint 错误！
-
-            输出格式：
-            仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
-            """,
-            name: "PgTextToWriteSqlAgent",
-            description: "Converts natural language write requirement into safe PostgreSQL DML SQL");
+                       instructions: """
+                       你是 PostgreSQL 写入 SQL 生成器。
+                       目标：根据用户需求和给定 schema 生成可执行的数据变更 SQL。
+                     
+                       约束：
+                       1) 只允许 INSERT/UPDATE/DELETE；
+                       2) 只生成一条 SQL，不允许分号分隔多语句；
+                       3) 严禁 DDL（CREATE/ALTER/DROP/TRUNCATE 等）；
+                       4) UPDATE/DELETE 必须带 WHERE；
+                       5) 表名和字段名必须严格、100%来自给定的 schema。绝对不要凭空捏造字段名！如果用户说“类别是BMW”，而表中只有 `CategoryId`，你绝对不能生成 `CategoryName` 这个字段！必须使用子查询去查出对应的 ID 并赋给 `CategoryId` 字段。
+                       6) 若需求不清晰，做最保守的精确变更，不做全表操作。
+                       7) 所有的表名和列名（包括 INSERT 列表、UPDATE SET 列表和 WHERE 条件中的列名）都必须使用双引号包裹，以保证大小写精确匹配（例如：UPDATE "public"."TodoItems" SET "IsDone" = true WHERE "Id" = '...'）。不要使用未带双引号的标识符。
+                       8) 用户提供的业务值必须原样保留，不允许擅自改写、替换、联想或翻译。
+                       9) 虽然我们在上下文提供了当前用户的 UserId，但你必须检查你要查询或操作的表是否真的有 UserId 字段，如果没有，请不要在 WHERE 条件中加入 UserId 的过滤！
+                       10) 必须根据提供的 schema 数据类型生成正确的语法：更新或插入 uuid、字符串、日期字段时必须使用单引号（'）包裹值；更新布尔值请使用 true/false；更新数值请直接写数字。
+                       11) 严禁凭空伪造外键 UUID 值！如果需要关联其他表的数据，必须使用子查询去获取真实的 ID。注意：在使用子查询匹配外键时，如果目标字段可能是外键（比如 Categories 表的 Name 字段），请尽量使用 ILIKE 模糊匹配（例如 ILIKE '%BMW%'），以防止因用户输入的名称不完全精确而导致子查询返回 NULL，进而引发外键字段 not-null constraint 错误！
+                     
+                       输出格式：
+                       仅返回 JSON 对象：{"sql":"..."}，不要附加解释文本。
+                       """,
+                       name: "PgTextToWriteSqlAgent",
+                       description: "Converts natural language write requirement into safe PostgreSQL DML SQL");
 
         ChatOptions chatOptions = new()
         {
