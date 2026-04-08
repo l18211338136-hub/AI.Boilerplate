@@ -1403,4 +1403,19 @@ Na het bereiken van {0} zullen extra aanmeldingen verminderde functies hebben.</
   <data name="RagKeywordScore" xml:space="preserve">
     <value>Keyword</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>Bestand uploaden</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>Bijlage</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>Bijlage verwijderen</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>Bestand {0} is te groot (max 10MB).</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>Fout bij het lezen van bestand.</value>
+  </data>
 </root>

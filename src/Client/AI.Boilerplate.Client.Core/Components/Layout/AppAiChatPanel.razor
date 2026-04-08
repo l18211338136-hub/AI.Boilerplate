@@ -49,6 +49,25 @@
                             if (message.Role is AiChatMessageRole.User)
                             {
                                 <BitCard Background="BitColorKind.Tertiary" Class="user-message">
+                                    @if (message.Attachments != null && message.Attachments.Any())
+                                    {
+                                        <div style="display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 8px;">
+                                            @foreach (var attachment in message.Attachments)
+                                            {
+                                                if (attachment.MimeType?.StartsWith("image/") == true)
+                                                {
+                                                    <img src="data:@attachment.MimeType;base64,@attachment.Base64Data" style="max-height: 80px; max-width: 100%; border-radius: 4px;" />
+                                                }
+                                                else
+                                                {
+                                                    <div style="padding: 4px 8px; background: rgba(0,0,0,0.1); border-radius: 4px; display: flex; align-items: center; gap: 6px; font-size: 0.85rem;">
+                                                        <BitIcon IconName="@BitIconName.Document" />
+                                                        <span style="max-width: 150px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">@(attachment.FileName ?? Localizer["AppAiChatPanelAttachment"])</span>
+                                                    </div>
+                                                }
+                                            }
+                                        </div>
+                                    }
                                     <BitText Element="pre">@message.Content</BitText>
                                 </BitCard>
                             }
@@ -125,17 +144,51 @@
                     </BitStack>
                 }
 
+                @if (pendingAttachments.Any())
+                {
+                    <div style="display: flex; flex-wrap: wrap; gap: 8px; padding: 0.5rem; background: var(--bit-clr-bg-sec); border-top-left-radius: 8px; border-top-right-radius: 8px; margin: 0.5rem 0.5rem 0 0.5rem; max-height: 120px; overflow-y: auto;">
+                        @foreach (var attachment in pendingAttachments)
+                        {
+                            <div style="display: flex; align-items: center; background: var(--bit-clr-bg-pri); padding: 4px 8px; border-radius: 6px; box-shadow: 0 1px 3px rgba(0,0,0,0.1); border: 1px solid var(--bit-clr-brd-sec);">
+                                @if (attachment.MimeType?.StartsWith("image/") == true)
+                                {
+                                    <img src="data:@attachment.MimeType;base64,@attachment.Base64Data" style="height: 24px; border-radius: 4px; margin-inline-end: 8px;" />
+                                }
+                                else
+                                {
+                                    <BitIcon IconName="@BitIconName.Document" Style="font-size: 16px; margin-inline-end: 6px;" />
+                                }
+                                <BitText Style="max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.85rem;">
+                                    @(attachment.FileName ?? Localizer["AppAiChatPanelAttachment"])
+                                </BitText>
+                                <BitButton IconOnly Variant="BitVariant.Text" Color="BitColor.Error" IconName="@BitIconName.Cancel" Style="width: 24px; height: 24px; margin-inline-start: 4px;" OnClick="WrapHandled(() => RemovePendingAttachment(attachment))" Title="@Localizer["AppAiChatPanelRemoveAttachment"]" />
+                            </div>
+                        }
+                    </div>
+                }
+
                 <BitStack FitHeight Style="position:relative">
-                    <BitTextField Rows="1"
+                    <InputFile OnChange="HandleFileUpload" style="display: none" id="chat-file-upload" multiple />
+
+                    <BitButton Float
+                               Variant="BitVariant.Text"
+                               FloatAbsolute
+                               FloatOffset="0.5rem"
+                               Style="inset-inline-end: 2.5rem;"
+                               IconName="@BitIconName.Attach"
+                               OnClick="WrapHandled(HandleUploadClick)"
+                               Title="@Localizer["AppAiChatPanelUploadFile"]" />
+
+                    <BitTextField Rows="5"
                                   Immediate
                                   Multiline
                                   AutoHeight
                                   PreventEnter
-                                  MaxLength="1024"
+                                  MaxLength="1000000"
                                   Style="width:100%"
                                   @bind-Value="@userInput"
                                   OnEnter="WrapHandled((KeyboardEventArgs e) => HandleOnUserInputEnter(e))"
-                                  Styles="@(new() { FieldGroup = "padding:0.5rem; padding-inline-end:2.5rem", Input = "min-height:unset" })"
+                                  Styles="@(new() { FieldGroup = "padding:0.5rem; padding-inline-end:5rem", Input = "min-height:unset" })"
                                   Placeholder="@(Localizer[nameof(AppStrings.AiChatPanelPlaceholder)])" />
 
                     <BitButton Float
@@ -145,7 +198,7 @@
                                Class="send-message-button"
                                OnClick="WrapHandled(SendMessage)"
                                Title="@Localizer[nameof(AppStrings.Send)]"
-                               IsEnabled=@(string.IsNullOrEmpty(userInput) is false)
+                               IsEnabled=@(string.IsNullOrEmpty(userInput) is false || pendingAttachments.Any() is true)
                                IconName="@(CurrentDir is BitDir.Rtl ? BitIconName.SendMirrored : BitIconName.Send)" />
                 </BitStack>
             </BitStack>

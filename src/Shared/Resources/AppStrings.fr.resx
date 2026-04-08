@@ -1403,4 +1403,19 @@ Après avoir atteint {0}, les connexions supplémentaires auront des fonctions r
   <data name="RagKeywordScore" xml:space="preserve">
     <value>Keyword</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>Téléverser un fichier</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>Pièce jointe</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>Supprimer la pièce jointe</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>Le fichier {0} est trop volumineux (max 10 Mo).</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>Erreur lors de la lecture du fichier.</value>
+  </data>
 </root>

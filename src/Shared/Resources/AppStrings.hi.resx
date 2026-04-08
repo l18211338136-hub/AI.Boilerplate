@@ -1403,4 +1403,19 @@
   <data name="RagKeywordScore" xml:space="preserve">
     <value>Keyword</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>फ़ाइल अपलोड करें</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>अनुलग्नक</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>अनुलग्नक हटाएँ</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>फ़ाइल {0} बहुत बड़ी है (अधिकतम 10MB)।</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>फ़ाइल पढ़ने में त्रुटि।</value>
+  </data>
 </root>

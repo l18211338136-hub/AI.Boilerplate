@@ -1403,4 +1403,19 @@ Nach Erreichen von {0} haben zusätzliche Anmeldungen reduzierte Funktionen.</va
   <data name="RagKeywordScore" xml:space="preserve">
     <value>Keyword</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>Datei hochladen</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>Anhang</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>Anhang entfernen</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>Datei {0} ist zu groß (max. 10 MB).</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>Fehler beim Lesen der Datei.</value>
+  </data>
 </root>

@@ -1403,4 +1403,19 @@ Después de alcanzar {0}, los inicios de sesión adicionales tendrán funciones 
   <data name="RagKeywordScore" xml:space="preserve">
     <value>Keyword</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>Subir archivo</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>Adjunto</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>Eliminar adjunto</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>El archivo {0} es demasiado grande (máx. 10MB).</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>Error al leer el archivo.</value>
+  </data>
 </root>

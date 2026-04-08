@@ -1,4 +1,4 @@
-﻿namespace AI.Boilerplate.Shared.Features.Chatbot;
+namespace AI.Boilerplate.Shared.Features.Chatbot;
 
 public class StartChatRequest
 {
@@ -24,10 +24,34 @@ public enum AiChatMessageRole
     Assistant
 }
 
+public class AiChatAttachment
+{
+    public string? Base64Data { get; set; }
+    public string? MimeType { get; set; }
+    public string? FileName { get; set; }
+}
+
 public class AiChatMessage
 {
     public AiChatMessageRole Role { get; set; }
     public string? Content { get; set; }
+
+    /// <summary>
+    /// Attachments like images or documents.
+    /// </summary>
+    public List<AiChatAttachment> Attachments { get; set; } = new();
+
+    /// <summary>
+    /// Base64 encoded image data or other file data.
+    /// </summary>
+    [Obsolete("Use Attachments instead")]
+    public string? Base64Data { get; set; }
+
+    /// <summary>
+    /// MIME type of the data (e.g. image/png, image/jpeg).
+    /// </summary>
+    [Obsolete("Use Attachments instead")]
+    public string? MimeType { get; set; }
 
     [JsonIgnore]
     public bool Successful { get; set; } = true;

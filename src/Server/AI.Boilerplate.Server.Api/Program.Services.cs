@@ -1,4 +1,4 @@
-﻿using System.Net;
+﻿﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -212,6 +212,7 @@ public static partial class Program
         var signalRBuilder = services.AddSignalR(options =>
         {
             options.EnableDetailedErrors = env.IsDevelopment();
+            options.MaximumReceiveMessageSize = 1024 * 1024 * 50; // 50MB
         }).AddJsonProtocol(options =>
         {
             JsonSerializerOptions jsonOptions = new JsonSerializerOptions(AppJsonContext.Default.Options);

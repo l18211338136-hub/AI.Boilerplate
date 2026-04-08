@@ -2,6 +2,7 @@ using System.Threading.Channels;
 using AI.Boilerplate.Shared.Features.Chatbot;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
 using Microsoft.AspNetCore.Components.Web;
+using Microsoft.AspNetCore.Components.Forms;
 using Microsoft.AspNetCore.SignalR.Client;
 
 namespace AI.Boilerplate.Client.Core.Components.Layout;
@@ -16,6 +17,8 @@ public partial class AppAiChatPanel
 
 
     [AutoInject] private HubConnection hubConnection = default!;
+    [AutoInject] private IJSRuntime jsRuntime = default!;
+    [AutoInject] private ILogger<AppAiChatPanel> logger = default!;
 
 
     private bool isOpen;
@@ -23,7 +26,7 @@ public partial class AppAiChatPanel
     private string? userInput;
     private bool isSmallScreen;
     private int responseCounter;
-    private Channel<string>? channel;
+    private Channel<AiChatMessage>? channel;
     private AiChatMessage? lastAssistantMessage;
     private List<AiChatMessage> chatMessages = []; // TODO: Persist these values in client-side storage to retain them across app restarts.
     private List<string> followUpSuggestions = [];
@@ -31,6 +34,65 @@ public partial class AppAiChatPanel
 
     private bool isDashboardModalOpen;
     private string dashboardHtml = string.Empty;
+
+    // Pending attachments state
+    private List<AiChatAttachment> pendingAttachments = new();
+
+    private async Task HandleUploadClick()
+    {
+        await jsRuntime.InvokeVoidAsync("eval", "document.getElementById('chat-file-upload').click()");
+    }
+
+    private async Task HandleFileUpload(InputFileChangeEventArgs e)
+    {
+        try
+        {
+            var files = e.GetMultipleFiles();
+            if (files == null || files.Count == 0) return;
+
+            foreach (var file in files)
+            {
+                // Limit file size to 10MB
+                if (file.Size > 1024 * 1024 * 10) 
+                {
+                    userInput = Localizer["AppAiChatPanelFileIsTooLarge", file.Name];
+                    continue;
+                }
+
+                using var stream = file.OpenReadStream(1024 * 1024 * 10);
+                using var memoryStream = new MemoryStream();
+                await stream.CopyToAsync(memoryStream, CurrentCancellationToken);
+                var bytes = memoryStream.ToArray();
+                
+                var mimeType = file.ContentType;
+                if (string.IsNullOrEmpty(mimeType))
+                {
+                    mimeType = "application/octet-stream";
+                }
+
+                pendingAttachments.Add(new AiChatAttachment
+                {
+                    Base64Data = Convert.ToBase64String(bytes),
+                    MimeType = mimeType,
+                    FileName = file.Name
+                });
+            }
+
+            StateHasChanged();
+        }
+        catch (Exception ex)
+        {
+            logger.LogError(ex, "Error reading file");
+            userInput = Localizer["AppAiChatPanelErrorReadingFile"];
+            StateHasChanged();
+        }
+    }
+
+    private void RemovePendingAttachment(AiChatAttachment attachment)
+    {
+        pendingAttachments.Remove(attachment);
+        StateHasChanged();
+    }
 
     private bool ExtractHtmlDashboard(string? content, out string html)
     {
@@ -123,6 +185,11 @@ public partial class AppAiChatPanel
 
     private async Task SendMessage()
     {
+        if (string.IsNullOrWhiteSpace(userInput) && !pendingAttachments.Any())
+        {
+            return;
+        }
+
         if (channel is null)
         {
             _ = StartChannel();
@@ -133,13 +200,23 @@ public partial class AppAiChatPanel
         var input = userInput;
         userInput = string.Empty;
 
-        chatMessages.Add(new() { Content = input, Role = AiChatMessageRole.User });
+        var message = new AiChatMessage 
+        { 
+            Content = input, 
+            Role = AiChatMessageRole.User,
+            Attachments = new List<AiChatAttachment>(pendingAttachments)
+        };
+        
+        // Clear pending attachment state
+        pendingAttachments.Clear();
+
+        chatMessages.Add(message);
         lastAssistantMessage = new() { Role = AiChatMessageRole.Assistant };
         chatMessages.Add(lastAssistantMessage);
 
         StateHasChanged();
 
-        await channel!.Writer.WriteAsync(input!, CurrentCancellationToken);
+        await channel!.Writer.WriteAsync(message, CurrentCancellationToken);
     }
 
     private async Task ClearChat()
@@ -178,7 +255,7 @@ public partial class AppAiChatPanel
 
     private async Task StartChannel()
     {
-        channel = Channel.CreateUnbounded<string>(new() { SingleReader = true, SingleWriter = true });
+        channel = Channel.CreateUnbounded<AiChatMessage>(new() { SingleReader = true, SingleWriter = true });
 
         // The following code streams user's input messages to the server and processes the streamed responses.
         // It keeps the chat ongoing until CurrentCancellationToken is cancelled.

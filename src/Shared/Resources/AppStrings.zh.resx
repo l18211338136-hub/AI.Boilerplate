@@ -1409,4 +1409,19 @@
   <data name="RagContextPreview" xml:space="preserve">
     <value>上下文预览</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>上传文件</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>附件</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>移除附件</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>文件 {0} 过大 (最大10MB)。</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>读取文件时出错。</value>
+  </data>
 </root>

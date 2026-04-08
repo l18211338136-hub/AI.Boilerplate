@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Threading.Channels;
 using AI.Boilerplate.Shared.Features.Chatbot;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -48,7 +48,47 @@ public partial class AppChatbot
         string? signalRConnectionId,
         CancellationToken cancellationToken)
     {
-        chatMessages = [.. request.ChatMessagesHistory.Select(c => new ChatMessage(c.Role is AiChatMessageRole.Assistant ? ChatRole.Assistant : ChatRole.User, c.Content))];
+        chatMessages = [];
+        foreach (var c in request.ChatMessagesHistory)
+        {
+            var role = c.Role is AiChatMessageRole.Assistant ? ChatRole.Assistant : ChatRole.User;
+            var chatMsg = new ChatMessage(role, c.Content);
+
+            if (c.Attachments != null && c.Attachments.Any())
+            {
+                foreach (var attachment in c.Attachments)
+                {
+                    if (!string.IsNullOrEmpty(attachment.Base64Data) && !string.IsNullOrEmpty(attachment.MimeType))
+                    {
+                        var bytes = Convert.FromBase64String(attachment.Base64Data);
+                        
+                        if (IsTextBasedAttachment(attachment, bytes))
+                        {
+                            try
+                            {
+                                var textContent = Encoding.UTF8.GetString(bytes);
+                                chatMsg.Contents.Add(new TextContent($"\n\n--- Content of attached file: {attachment.FileName ?? "Unknown"} ---\n{textContent}\n--- End of file ---"));
+                            }
+                            catch
+                            {
+                                // Fallback to data content if decoding fails
+                                chatMsg.Contents.Add(new DataContent(bytes, attachment.MimeType));
+                            }
+                        }
+                        else
+                        {
+                            chatMsg.Contents.Add(new DataContent(bytes, attachment.MimeType));
+                        }
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(c.Base64Data) && !string.IsNullOrEmpty(c.MimeType))
+            {
+                var bytes = Convert.FromBase64String(c.Base64Data);
+                chatMsg.Contents.Add(new DataContent(bytes, c.MimeType));
+            }
+            chatMessages.Add(chatMsg);
+        }
 
         CultureInfo? culture = null;
         if (request.CultureId is not null && CultureInfoManager.InvariantGlobalization is false)
@@ -93,11 +133,64 @@ public partial class AppChatbot
     public void Stop() => responseChannel.Writer.Complete();
 
     /// <summary>
+    /// Checks whether the attachment is text-based using its MimeType, Extension or by probing the byte content.
+    /// </summary>
+    private static bool IsTextBasedAttachment(AiChatAttachment attachment, byte[] bytes)
+    {
+        // 1. Check explicit text-like MIME types
+        if (!string.IsNullOrEmpty(attachment.MimeType))
+        {
+            var mime = attachment.MimeType.ToLowerInvariant();
+            if (mime.StartsWith("text/") || 
+                mime.Contains("json") || 
+                mime.Contains("xml") || 
+                mime.Contains("javascript") ||
+                mime.Contains("x-sh") ||
+                mime.Contains("x-httpd-php"))
+            {
+                return true;
+            }
+            
+            // Explicitly exclude known binary media
+            if (mime.StartsWith("image/") || 
+                mime.StartsWith("audio/") || 
+                mime.StartsWith("video/") || 
+                mime == "application/pdf" || 
+                mime == "application/zip" || 
+                mime == "application/x-zip-compressed")
+            {
+                return false;
+            }
+        }
+
+        // 2. Check common text file extensions
+        var ext = Path.GetExtension(attachment.FileName)?.ToLowerInvariant();
+        string[] textExtensions = { ".txt", ".md", ".csv", ".json", ".xml", ".html", ".css", ".js", ".ts", ".cs", ".py", ".java", ".c", ".cpp", ".h", ".hpp", ".go", ".rs", ".rb", ".php", ".sh", ".bat", ".ps1", ".ini", ".cfg", ".yaml", ".yml", ".toml", ".log", ".sql", ".razor", ".csproj", ".sln", ".props", ".targets" };
+        
+        if (ext != null && textExtensions.Contains(ext))
+        {
+            return true;
+        }
+
+        // 3. Fallback Content Heuristic: Check for null bytes in the first 8KB. 
+        // Null bytes typically indicate binary files (like compiled executables, images, or PDFs).
+        int checkLength = Math.Min(bytes.Length, 8192);
+        if (checkLength == 0) return false;
+
+        for (int i = 0; i < checkLength; i++)
+        {
+            if (bytes[i] == 0) return false;
+        }
+        
+        return true;
+    }
+
+    /// <summary>
     /// Process an incoming message and stream the AI response
     /// </summary>
     public async Task ProcessNewMessage(
         bool generateFollowUpSuggestions,
-        string incomingMessage,
+        AiChatMessage incomingMessage,
         Uri? serverApiAddress,
         ClaimsPrincipal? user,
         CancellationToken cancellationToken)
@@ -115,9 +208,53 @@ public partial class AppChatbot
         StringBuilder assistantResponse = new();
         try
         {
-            Console.WriteLine($"\n[User]: {incomingMessage}"); // Print user message to console
+            Console.WriteLine($"\n[User]: {incomingMessage.Content}"); // Print user message to console
+            if (incomingMessage.Attachments != null && incomingMessage.Attachments.Any())
+            {
+                Console.WriteLine($"[Attachments]: {incomingMessage.Attachments.Count} files received.");
+            }
+            else if (!string.IsNullOrEmpty(incomingMessage.Base64Data)) 
+            {
+                Console.WriteLine($"[Attachment]: {incomingMessage.MimeType} Data Received.");
+            }
+                
             Console.Write("[AI]: "); // Prefix for AI response
-            chatMessages.Add(new(ChatRole.User, incomingMessage));
+
+            var newChatMessage = new ChatMessage(ChatRole.User, incomingMessage.Content);
+            if (incomingMessage.Attachments != null && incomingMessage.Attachments.Any())
+            {
+                foreach (var attachment in incomingMessage.Attachments)
+                {
+                    if (!string.IsNullOrEmpty(attachment.Base64Data) && !string.IsNullOrEmpty(attachment.MimeType))
+                    {
+                        var bytes = Convert.FromBase64String(attachment.Base64Data);
+                        
+                        if (IsTextBasedAttachment(attachment, bytes))
+                        {
+                            try
+                            {
+                                var textContent = Encoding.UTF8.GetString(bytes);
+                                newChatMessage.Contents.Add(new TextContent($"\n\n--- Content of attached file: {attachment.FileName ?? "Unknown"} ---\n{textContent}\n--- End of file ---"));
+                            }
+                            catch
+                            {
+                                newChatMessage.Contents.Add(new DataContent(bytes, attachment.MimeType));
+                            }
+                        }
+                        else
+                        {
+                            newChatMessage.Contents.Add(new DataContent(bytes, attachment.MimeType));
+                        }
+                    }
+                }
+            }
+            else if (!string.IsNullOrEmpty(incomingMessage.Base64Data) && !string.IsNullOrEmpty(incomingMessage.MimeType))
+            {
+                var bytes = Convert.FromBase64String(incomingMessage.Base64Data);
+                newChatMessage.Contents.Add(new DataContent(bytes, incomingMessage.MimeType));
+            }
+            chatMessages.Add(newChatMessage);
+            
             currentUserId = user.IsAuthenticated() ? user!.GetUserId() : null;
 
             var chatOptions = CreateChatOptions();
@@ -155,7 +292,7 @@ public partial class AppChatbot
             {
                 // Generate follow-up suggestions
                 var followUpSuggestions = await GenerateFollowUpSuggestions(
-                    incomingMessage,
+                    incomingMessage.Content ?? "",
                     assistantResponse.ToString(),
                     chatOptions,
                     cancellationToken);

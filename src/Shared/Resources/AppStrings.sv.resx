@@ -1403,4 +1403,19 @@ Efter att ha nått {0} kommer extra inloggningar att ha reducerade funktioner.</
   <data name="RagKeywordScore" xml:space="preserve">
     <value>Keyword</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>Ladda upp fil</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>Bilaga</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>Ta bort bilaga</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>Filen {0} är för stor (max 10 MB).</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>Fel vid läsning av fil.</value>
+  </data>
 </root>

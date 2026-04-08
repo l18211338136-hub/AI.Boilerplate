@@ -1,4 +1,4 @@
-﻿using System.Diagnostics.Metrics;
+using System.Diagnostics.Metrics;
 using Microsoft.AspNetCore.SignalR;
 using System.Runtime.CompilerServices;
 using AI.Boilerplate.Shared.Features.Chatbot;
@@ -30,7 +30,7 @@ public partial class AppHub
     [HubMethodName(SharedAppMessages.StartChat)]
     public async IAsyncEnumerable<string> StartChat(
         StartChatRequest request,
-        IAsyncEnumerable<string> incomingMessages,
+        IAsyncEnumerable<AiChatMessage> incomingMessages,
         [EnumeratorCancellation] CancellationToken cancellationToken,
         [FromServices] AppChatbot chatbotService)
     {

@@ -1409,4 +1409,19 @@ After reaching {0}, extra sign-ins will have reduced functions.</value>
     <data name="RagContextPreview" xml:space="preserve">
     <value>Context preview</value>
   </data>
+  <data name="AppAiChatPanelUploadFile" xml:space="preserve">
+    <value>Upload file</value>
+  </data>
+  <data name="AppAiChatPanelAttachment" xml:space="preserve">
+    <value>Attachment</value>
+  </data>
+  <data name="AppAiChatPanelRemoveAttachment" xml:space="preserve">
+    <value>Remove attachment</value>
+  </data>
+  <data name="AppAiChatPanelFileIsTooLarge" xml:space="preserve">
+    <value>File {0} is too large (max 10MB).</value>
+  </data>
+  <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
+    <value>Error reading file.</value>
+  </data>
 </root>
