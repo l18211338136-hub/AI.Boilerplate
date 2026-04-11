@@ -1022,6 +1022,9 @@ Na het bereiken van {0} zullen extra aanmeldingen verminderde functies hebben.</
   <data name="ProductsPageTitle" xml:space="preserve">
     <value>Producten</value>
   </data>
+  <data name="SearchOnDescription" xml:space="preserve">
+    <value>Zoek op beschrijving</value>
+  </data>
   <data name="ProductsPercentagePerCategory" xml:space="preserve">
     <value>Productenpercentage per categorie</value>
   </data>

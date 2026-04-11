@@ -1022,6 +1022,9 @@ Après avoir atteint {0}, les connexions supplémentaires auront des fonctions r
   <data name="ProductsPageTitle" xml:space="preserve">
     <value>Produits</value>
   </data>
+  <data name="SearchOnDescription" xml:space="preserve">
+    <value>Rechercher par description</value>
+  </data>
   <data name="ProductsPercentagePerCategory" xml:space="preserve">
     <value>Pourcentage de produits par catégorie</value>
   </data>

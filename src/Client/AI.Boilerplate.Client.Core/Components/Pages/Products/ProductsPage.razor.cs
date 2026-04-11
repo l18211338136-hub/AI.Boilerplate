@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Shared.Features.Products;
+﻿﻿using AI.Boilerplate.Shared.Features.Products;
 
 namespace AI.Boilerplate.Client.Core.Components.Pages.Products;
 
@@ -11,6 +11,7 @@ public partial class ProductsPage
     private ProductDto? deletingProduct;
     private string productNameFilter = string.Empty;
     private string categoryNameFilter = string.Empty;
+    private string descriptionFilter = string.Empty;
 
     private BitDataGrid<ProductDto>? dataGrid;
     private BitDataGridItemsProvider<ProductDto> productsProvider = default!;
@@ -36,6 +37,16 @@ public partial class ProductsPage
         set
         {
             categoryNameFilter = value;
+            _ = RefreshData();
+        }
+    }
+
+    private string DescriptionFilter
+    {
+        get => descriptionFilter;
+        set
+        {
+            descriptionFilter = value;
             _ = RefreshData();
         }
     }
@@ -73,6 +84,11 @@ public partial class ProductsPage
                 if (string.IsNullOrEmpty(CategoryNameFilter) is false)
                 {
                     query.AndFilter = $"contains(tolower({nameof(ProductDto.CategoryName)}),'{CategoryNameFilter.ToLower()}')";
+                }
+
+                if (string.IsNullOrEmpty(descriptionFilter) is false)
+                {
+                    query.AndFilter = $"contains(tolower({nameof(ProductDto.DescriptionText)}),'{descriptionFilter.ToLower()}')";
                 }
 
                 var queriedRequest = productController.WithQuery(query.ToString());
@@ -127,7 +143,3 @@ public partial class ProductsPage
         await RefreshData();
     }
 }
-
-
-
-

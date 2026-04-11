@@ -1016,6 +1016,9 @@ After reaching {0}, extra sign-ins will have reduced functions.</value>
     <data name="ProductsCountPerCategoryChart" xml:space="preserve">
     <value>Products count per category chart</value>
   </data>
+    <data name="SearchOnDescription" xml:space="preserve">
+    <value>Search on description</value>
+  </data>
     <data name="ProductsCountPerCategoryChartText" xml:space="preserve">
     <value>This chart shows the number of products in each category.</value>
   </data>

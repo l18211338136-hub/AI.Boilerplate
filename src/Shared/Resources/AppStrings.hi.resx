@@ -1418,4 +1418,7 @@
   <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
     <value>फ़ाइल पढ़ने में त्रुटि।</value>
   </data>
+  <data name="SearchOnDescription" xml:space="preserve">
+    <value>विवरण पर खोजें</value>
+  </data>
 </root>

@@ -85,6 +85,24 @@
                                                Sortable="true"
                                                Format="N0" />
 
+                    <BitDataGridPropertyColumn Title="@Localizer[nameof(AppStrings.Description)]"
+                                               Property="p => p!.DescriptionText"
+                                               Class="description-col"
+                                               Sortable="true">
+                        <ColumnOptions>
+                            <BitStack Horizontal>
+                                <BitSearchBox @bind-Value="DescriptionFilter"
+                                              AutoFocus DisableAnimation
+                                              Immediate DebounceTime="500"
+                                              Placeholder="@Localizer[(nameof(AppStrings.SearchOnDescription))]" />
+                                @if (isLoading)
+                                {
+                                    <BitEllipsisLoading CustomSize="32" />
+                                }
+                            </BitStack>
+                        </ColumnOptions>
+                    </BitDataGridPropertyColumn>
+
                     <BitDataGridTemplateColumn Title="@Localizer[(nameof(AppStrings.Action))]"
                                                Align="BitDataGridAlign.Center"
                                                Class="actions-col"

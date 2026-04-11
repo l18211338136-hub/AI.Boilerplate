@@ -1016,6 +1016,9 @@
   <data name="ProductsCountPerCategoryChart" xml:space="preserve">
     <value>每个类别的产品数量图表</value>
   </data>
+    <data name="SearchOnDescription" xml:space="preserve">
+    <value>搜索描述</value>
+  </data>
   <data name="ProductsCountPerCategoryChartText" xml:space="preserve">
     <value>此图表显示每个类别的产品数量。</value>
   </data>

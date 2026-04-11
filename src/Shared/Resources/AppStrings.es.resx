@@ -1022,6 +1022,9 @@ Después de alcanzar {0}, los inicios de sesión adicionales tendrán funciones 
   <data name="ProductsPageTitle" xml:space="preserve">
     <value>Productos</value>
   </data>
+  <data name="SearchOnDescription" xml:space="preserve">
+    <value>Buscar por descripción</value>
+  </data>
   <data name="ProductsPercentagePerCategory" xml:space="preserve">
     <value>Porcentaje de productos por categoría</value>
   </data>

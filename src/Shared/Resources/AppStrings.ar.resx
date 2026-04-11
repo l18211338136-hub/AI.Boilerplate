@@ -1022,6 +1022,9 @@
   <data name="ProductsPageTitle" xml:space="preserve">
     <value>المنتجات</value>
   </data>
+  <data name="SearchOnDescription" xml:space="preserve">
+    <value>بحث حسب الوصف</value>
+  </data>
   <data name="ProductsPercentagePerCategory" xml:space="preserve">
     <value>نسبة المنتجات لكل فئة</value>
   </data>

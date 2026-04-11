@@ -1013,6 +1013,9 @@ Efter att ha nått {0} kommer extra inloggningar att ha reducerade funktioner.</
   <data name="SearchOnName" xml:space="preserve">
     <value>Sök på namn</value>
   </data>
+  <data name="SearchOnDescription" xml:space="preserve">
+    <value>Sök på beskrivning</value>
+  </data>
   <data name="ProductsCountPerCategoryChart" xml:space="preserve">
     <value>Diagram över produktantal per kategori</value>
   </data>
