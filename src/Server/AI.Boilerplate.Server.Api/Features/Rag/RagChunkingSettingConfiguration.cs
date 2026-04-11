@@ -5,6 +5,7 @@ public class RagChunkingSettingConfiguration : IEntityTypeConfiguration<RagChunk
     public void Configure(EntityTypeBuilder<RagChunkingSetting> builder)
     {
         builder.ToTable(t => t.HasComment("RAG 分片规则配置"));
+        builder.Property(x => x.Id).HasComment("主键ID");
         builder.Property(x => x.MaxChunkLength).HasComment("最大分片长度");
         builder.Property(x => x.PreferParagraphFirst).HasComment("是否优先按段落分片");
         builder.Property(x => x.MinChunkCount).HasComment("最小分片数");
