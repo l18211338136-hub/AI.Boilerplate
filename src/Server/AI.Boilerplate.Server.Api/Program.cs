@@ -1,4 +1,6 @@
-﻿namespace AI.Boilerplate.Server.Api;
+﻿using AI.Boilerplate.Server.Api.Features.Products;
+
+namespace AI.Boilerplate.Server.Api;
 
 public static partial class Program
 {
@@ -25,6 +27,11 @@ public static partial class Program
         }
 
         app.ConfigureMiddlewares();
+
+        // 初始化产品向量化后台任务
+        using var jobScope = app.Services.CreateScope();
+        var productEmbeddingJobRunner = jobScope.ServiceProvider.GetRequiredService<ProductEmbeddingJobRunner>();
+        productEmbeddingJobRunner.Initialize();
 
         await app.RunAsync();
     }

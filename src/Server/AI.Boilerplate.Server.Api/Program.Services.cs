@@ -1,4 +1,4 @@
-﻿﻿using System.Net;
+﻿﻿﻿﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -66,6 +66,7 @@ public static partial class Program
             .WithToolsFromAssembly();
         services.AddScoped<Infrastructure.SignalR.AppChatbot>();
         services.AddScoped<ProductEmbeddingService>();
+        services.AddScoped<ProductEmbeddingJobRunner>();
         if (appSettings.Sms?.Configured is true)
         {
             TwilioClient.Init(appSettings.Sms.TwilioAccountSid, appSettings.Sms.TwilioAutoToken);
