@@ -1307,8 +1307,8 @@
   <data name="ImageTooSmall" xml:space="preserve">
     <value>छवि बहुत छोटी है। न्यूनतम आवश्यक आयाम {0}x{1} हैं, लेकिन वर्तमान आयाम {2}x{3} हैं।</value>
   </data>
-  <data name="ImageNotCarError" xml:space="preserve">
-    <value>प्रदान की गई छवि में कार नहीं है।</value>
+  <data name="ImageNotValidProductError" xml:space="preserve">
+    <value>दी गई छवि में कोई मान्य उत्पाद नहीं है।</value>
   </data>
   <data name="RagManagementTitle" xml:space="preserve">
     <value>RAG Management</value>

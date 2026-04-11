@@ -1310,8 +1310,8 @@ Na het bereiken van {0} zullen extra aanmeldingen verminderde functies hebben.</
   <data name="ImageTooSmall" xml:space="preserve">
     <value>Afbeelding is te klein. Minimale vereiste afmetingen zijn {0}x{1}, maar de huidige afmetingen zijn {2}x{3}.</value>
   </data>
-  <data name="ImageNotCarError" xml:space="preserve">
-    <value>De opgegeven afbeelding bevat geen auto.</value>
+  <data name="ImageNotValidProductError" xml:space="preserve">
+    <value>De opgegeven afbeelding bevat geen geldige product.</value>
   </data>
   <data name="RagManagementTitle" xml:space="preserve">
     <value>RAG Management</value>

@@ -1307,8 +1307,8 @@
     <data name="ImageTooSmall" xml:space="preserve">
     <value>تصویر خیلی کوچک است. حداقل ابعاد مورد نیاز {0}x{1} است، اما ابعاد فعلی {2}x{3} است.</value>
   </data>
-    <data name="ImageNotCarError" xml:space="preserve">
-    <value>تصویر ارائه شده حاوی ماشین نیست.</value>
+    <data name="ImageNotValidProductError" xml:space="preserve">
+    <value>تصویر ارائه شده شامل محصولی معتبر نمی باشد.</value>
   </data>
   <data name="RagManagementTitle" xml:space="preserve">
     <value>RAG Management</value>

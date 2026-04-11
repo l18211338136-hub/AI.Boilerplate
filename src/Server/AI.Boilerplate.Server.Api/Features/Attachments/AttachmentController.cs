@@ -195,27 +195,29 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
                 {
                     var imageAnalysisAgent = chatClient.AsAIAgent(
                         instructions: """
-                        你是一个产品图像专家助手。你的职责是分析用于电子商务目录的产品图像。
+                    你是一个产品图像专家助手。你的职责是分析用于电子商务目录的任意产品图像。
 
-                        分析流程：
-                        1. 首先，仔细检查图像内容
-                        2. 确定主要主体是否是汽车（车辆）
-                        3. 如果是汽车，提供详细的、对SEO友好的描述
-                        4. 如果不是汽车，解释为什么它不符合目录要求
+                    分析流程：
+                    1. 首先，仔细检查图像内容与质量
+                    2. 确定图像是否展示了一个清晰、可识别的商业产品（非人物/风景/抽象图等）
+                    3. 如果是有效产品，提供详细的、对 SEO 友好的中文描述，并提取关键属性（如品类、颜色、材质、适用场景等）
+                    4. 如果不符合目录要求，清晰说明具体原因（如主体模糊、非商品、违规内容等）
 
-                        响应格式：
-                        只返回一个包含以下内容的JSON对象，并且所有文本字段必须使用中文返回：
-                        - "isCar": 布尔值（如果图像显示的是汽车则为true，否则为false）
-                        - "confidence": 0-1之间的数字，表示分类的确信度
-                        - "alt": 字符串，用于辅助功能和SEO的详细中文描述
-                        - "reasoning": 字符串，简要解释你的分析决定的中文说明
+                    响应格式：
+                    只返回一个包含以下内容的 JSON 对象，并且所有文本字段必须使用中文返回：
+                    - "isValidProduct": 布尔值（如果图像展示的是符合目录标准的有效产品则为 true，否则为 false）
+                    - "confidence": 0-1 之间的数字，表示分类的确信度
+                    - "alt": 字符串，用于辅助功能和 SEO 的详细中文描述（如：「黑色真皮商务双肩包，多隔层设计，适合通勤与短途旅行」）
+                    - "reasoning": 字符串，简要解释你的分析决定的中文说明
+                    - "suggestedCategory": 字符串，建议的产品一级分类（如「箱包」「数码配件」「家居用品」等，仅在 isValidProduct 为 true 时提供）
 
-                        验证规则：
-                        - 图像质量必须可以接受用于目录
-                        - 汽车必须清晰可见作为主要主体
-                        """,
+                    验证规则：
+                    - 图像质量必须清晰，主体产品占比合理，无严重遮挡/模糊/水印
+                    - 产品必须是可销售的实物商品，排除虚拟服务、人物肖像、纯文字图片等
+                    - 描述需客观中立，避免主观评价或营销话术
+                    """,
                         name: "ProductImageAnalystAgent",
-                        description: "分析产品图像以确保它们符合汽车产品的目录标准");
+                        description: "分析任意产品图像，确保其符合电商目录的质量、内容与合规标准");
 
                     ChatOptions chatOptions = new()
                     {
@@ -230,34 +232,45 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
 
                     var response = await imageAnalysisAgent.RunAsync<AIImageReviewResponse>(
                         messages: [
-                            new ChatMessage(ChatRole.User, 
-                                "请为我们的汽车目录分析此产品图像。这是一个符合我们质量和内容标准的有效汽车产品图像吗？")
-                            {
-                                Contents = [new DataContent(imageBytes, "image/webp")]
-                            }
+                            new ChatMessage(ChatRole.User,
+                            "请为我们的电商目录分析此产品图像。这是一个符合质量和内容标准的有效商品图片吗？")
+                        {
+                            Contents = [new DataContent(imageBytes, "image/webp")]
+                        }
                         ],
                         cancellationToken: cancellationToken,
                         options: new Microsoft.Agents.AI.ChatClientAgentRunOptions(chatOptions));
 
-                    if (response.Result.IsCar is false)
+                    if (response.Result.IsValidProduct is false)
                     {
                         logger.LogWarning(
-                            "Image validation failed - Not a car product. Confidence: {Confidence}, Reasoning: {Reasoning}", 
-                            response.Result.Confidence, 
-                            response.Result.Reasoning);
-                        return BadRequest(Localizer[nameof(AppStrings.ImageNotCarError)].ToString());
+                            "Image validation failed - Not a valid product. Confidence: {Confidence}, Reasoning: {Reasoning}, SuggestedCategory: {Category}",
+                            response.Result.Confidence,
+                            response.Result.Reasoning,
+                            response.Result.SuggestedCategory);
+                        return BadRequest(Localizer[nameof(AppStrings.ImageNotValidProductError)].ToString());
                     }
 
                     if (response.Result.Confidence < 0.85)
                     {
                         logger.LogWarning(
-                            "Image analysis low confidence ({Confidence}). Reasoning: {Reasoning}. Alt text: {AltText}", 
+                            "Image analysis low confidence ({Confidence}). Reasoning: {Reasoning}. Alt text: {AltText}. Category: {Category}",
                             response.Result.Confidence,
                             response.Result.Reasoning,
-                            response.Result.Alt);
+                            response.Result.Alt,
+                            response.Result.SuggestedCategory);
                     }
 
                     altText = response.Result.Alt;
+
+                    // 可选：记录建议的分类，用于后续自动归类
+                    if (!string.IsNullOrEmpty(response.Result.SuggestedCategory))
+                    {
+                        logger.LogInformation(
+                            "AI suggested category for product image: {Category} (confidence: {Confidence})",
+                            response.Result.SuggestedCategory,
+                            response.Result.Confidence);
+                    }
                 }
             }
 
@@ -293,5 +306,5 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
         return filePath;
     }
 
-    public record AIImageReviewResponse(bool IsCar, double Confidence, string? Alt, string? Reasoning);
+    public record AIImageReviewResponse(bool IsValidProduct, double Confidence, string? Alt, string? Reasoning, string? SuggestedCategory = null);
 }
