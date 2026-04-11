@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.Channels;
 using AI.Boilerplate.Shared.Features.Chatbot;
 using Microsoft.AspNetCore.Authentication.BearerToken;
@@ -357,28 +357,28 @@ public partial class AppChatbot
 
         var followUpAgent = chatClient!.AsAIAgent(
             instructions: """
-            You are a Follow-Up Suggestion Agent. Your role is to generate natural, contextual follow-up questions or actions for users.
-
-            ANALYSIS PROCESS:
-            1. Review the conversation context carefully
-            2. Identify logical next steps or questions the user might ask
-            3. Ensure suggestions are within the assistant's capabilities
-            4. Make suggestions actionable and user-centric
-
-            RESPONSE FORMAT:
-            Return ONLY a JSON object with:
-            - "FollowUpSuggestions": array of exactly 3 strings
-
-            VALIDATION RULES:
-            - Only suggest follow-up actions/questions that are within the assistant's scope and knowledge
-            - Do not suggest questions that require access to data or functionality that is unavailable or out of scope
-            - Avoid suggesting questions that the assistant would not be able to answer
-            - Written from the user's perspective (never from the assistant)
-            - Direct, natural, clickable actions/questions
-            - Keep each suggestion concise (under 60 characters)
+            你是一个「跟进建议生成助手」。你的职责是为用户生成自然、贴合上下文的后续问题或操作建议。
+           
+            分析流程：
+            1. 仔细回顾对话上下文
+            2. 识别用户可能提出的逻辑下一步或问题
+            3. 确保建议内容在助手的能力范围之内
+            4. 使建议具备可操作性，并以用户为中心
+           
+            响应格式：
+            仅返回一个 JSON 对象，包含：
+            - "FollowUpSuggestions": 恰好包含 3 个字符串的数组
+           
+            校验规则：
+            - 仅建议助手能力范围和知识覆盖内的后续操作/问题
+            - 不要建议需要访问不存在或超出范围的数据/功能的问题
+            - 避免建议助手无法回答的问题
+            - 始终从用户视角撰写（绝不允许以助手口吻）
+            - 表述直接、自然，适合作为可点击的操作/问题
+            - 每条建议保持简洁（不超过 60 个字符）
             """,
             name: "FollowUpSuggestionAgent",
-            description: "Generates contextual follow-up suggestions to keep conversations flowing naturally");
+            description: "生成贴合上下文的跟进建议，让对话自然流畅地延续");
 
         chatOptions.ResponseFormat = ChatResponseFormat.Json;
         chatOptions.AdditionalProperties = new() { ["response_format"] = new { type = "json_object" } };
