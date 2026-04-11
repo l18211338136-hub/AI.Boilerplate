@@ -1,13 +1,18 @@
-using AI.Boilerplate.Server.Api.Features.Products;
-using AI.Boilerplate.Server.Api.Features.Categories;
-using AI.Boilerplate.Server.Api.Features.Todo;
-using AI.Boilerplate.Server.Api.Features.Identity.Models;
-using AI.Boilerplate.Server.Api.Infrastructure.Data.Configurations;
-using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
-using AI.Boilerplate.Server.Api.Features.PushNotification;
-using Hangfire.EntityFrameworkCore;
+﻿using AI.Boilerplate.Server.Api.Features.Addresses;
 using AI.Boilerplate.Server.Api.Features.Attachments;
+using AI.Boilerplate.Server.Api.Features.CartItems;
+using AI.Boilerplate.Server.Api.Features.Categories;
+using AI.Boilerplate.Server.Api.Features.Identity.Models;
+using AI.Boilerplate.Server.Api.Features.Inventories;
+using AI.Boilerplate.Server.Api.Features.Orders;
+using AI.Boilerplate.Server.Api.Features.Payments;
+using AI.Boilerplate.Server.Api.Features.ProductReviews;
+using AI.Boilerplate.Server.Api.Features.Products;
+using AI.Boilerplate.Server.Api.Features.PushNotification;
 using AI.Boilerplate.Server.Api.Features.Rag;
+using AI.Boilerplate.Server.Api.Features.Todo;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Configurations;
+using Hangfire.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.Data;
@@ -37,6 +42,15 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<RagChunkingSetting> RagChunkingSettings { get; set; } = default!;
 
     public DbSet<DataProtectionKey> DataProtectionKeys { get; set; } = default!;
+    // 商城系统实体
+    public DbSet<Address> Addresses { get; set; } = default!;
+    public DbSet<Order> Orders { get; set; } = default!;
+    public DbSet<OrderItem> OrderItems { get; set; } = default!;
+    public DbSet<CartItem> CartItems { get; set; } = default!;
+    public DbSet<ProductImage> ProductImages { get; set; } = default!;
+    public DbSet<Inventory> Inventories { get; set; } = default!;
+    public DbSet<ProductReview> ProductReviews { get; set; } = default!;
+    public DbSet<Payment> Payments { get; set; } = default!;
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
