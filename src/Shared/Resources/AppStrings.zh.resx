@@ -1,5 +1,4 @@
 <?xml version="1.0" encoding="utf-8"?>
-<!-- +:cnd:noEmit -->
 <root>
   <!-- 
     Microsoft ResX Schema 
@@ -118,7 +117,6 @@
   <resheader name="writer">
     <value>System.Resources.ResXResourceWriter, System.Windows.Forms, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089</value>
   </resheader>
-  <!-- .NET Validation messages -->
   <data name="CompareAttribute_ValidationError" xml:space="preserve">
     <value>'{0}' 和 '{1}' 不匹配。</value>
   </data>
@@ -140,7 +138,6 @@
   <data name="PhoneAttribute_ValidationError" xml:space="preserve">
     <value>{0} 字段不是有效的电话号码。</value>
   </data>
-  <!-- Exceptions -->
   <data name="BadRequestException" xml:space="preserve">
     <value>无效请求</value>
   </data>
@@ -177,7 +174,6 @@
   <data name="ServerConnectionException" xml:space="preserve">
     <value>无法连接到服务器。</value>
   </data>
-  <!-- AI.Boilerplate strings -->
   <data name="Active" xml:space="preserve">
     <value>活动</value>
   </data>
@@ -333,7 +329,7 @@
     <value>用户名</value>
   </data>
   <data name="Name" xml:space="preserve">
-    <value>姓名</value>
+    <value>名称</value>
   </data>
   <data name="Description" xml:space="preserve">
     <value>描述</value>
@@ -1016,7 +1012,7 @@
   <data name="ProductsCountPerCategoryChart" xml:space="preserve">
     <value>每个类别的产品数量图表</value>
   </data>
-    <data name="SearchOnDescription" xml:space="preserve">
+  <data name="SearchOnDescription" xml:space="preserve">
     <value>搜索描述</value>
   </data>
   <data name="ProductsCountPerCategoryChartText" xml:space="preserve">
