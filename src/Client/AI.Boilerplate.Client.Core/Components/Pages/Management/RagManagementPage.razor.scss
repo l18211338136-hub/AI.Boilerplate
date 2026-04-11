@@ -804,19 +804,9 @@
 
 ::deep {
     /* Better button padding */
-    .rag-primary-btn .bit-btn-flex, 
+    .bit-btn-flex, 
     .bit-btn-outline .bit-btn-flex {
         padding: 0.5rem 1rem;
-    }
-    
-    .rag-primary-btn {
-        background-color: var(--rag-brand);
-        border-color: var(--rag-brand);
-        
-        &:hover {
-            background-color: var(--rag-brand-dark);
-            border-color: var(--rag-brand-dark);
-        }
     }
 }
 

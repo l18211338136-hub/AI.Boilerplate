@@ -19,7 +19,7 @@
             <BitButton Variant="BitVariant.Text" IconName="@BitIconName.Settings" OnClick="WrapHandled(OpenChunkingPanel)">分片规则</BitButton>
             <BitButton Variant="BitVariant.Text" IconName="@BitIconName.RecycleBin" OnClick="WrapHandled(OpenRecyclePanel)">回收站</BitButton>
             <BitButton AutoLoading Variant="BitVariant.Outline" IconName="@BitIconName.Refresh" OnClick="WrapHandled(RefreshKnowledgeBases)" />
-            <BitButton Class="rag-primary-btn" IconName="@BitIconName.Add" OnClick="OpenAddKnowledgeBaseModal">新建知识库</BitButton>
+            <BitButton IconName="@BitIconName.Add" OnClick="OpenAddKnowledgeBaseModal">新建知识库</BitButton>
         </div>
     </div>
 
@@ -119,7 +119,7 @@
                             <div class="rag-tab-toolbar">
                                 <BitText Typography="BitTypography.Subtitle1">全部文档</BitText>
                                 <BitSpacer />
-                                <BitButton Class="rag-primary-btn" IconName="@BitIconName.Add" OnClick="OpenAddDocumentModal">添加文档</BitButton>
+                                <BitButton IconName="@BitIconName.Add" OnClick="OpenAddDocumentModal">添加文档</BitButton>
                             </div>
 
                             @if (isLoadingDocuments)
@@ -277,7 +277,7 @@
                                                   Label="测试问题"
                                                   Placeholder="输入测试问题，系统将模拟 RAG 流程进行检索..." />
                                     <div class="rag-debug-form-actions">
-                                        <BitButton AutoLoading Class="rag-primary-btn" IconName="@BitIconName.Search" IsEnabled="string.IsNullOrWhiteSpace(debugQuestion) is false"
+                                        <BitButton AutoLoading IconName="@BitIconName.Search" IsEnabled="string.IsNullOrWhiteSpace(debugQuestion) is false"
                                                    OnClick="WrapHandled(RunDebugRetrieve)">
                                             执行检索
                                         </BitButton>
@@ -362,7 +362,7 @@
         </div>
         <div class="rag-modal-footer">
             <BitButton Variant="BitVariant.Outline" OnClick="CloseAddKnowledgeBaseModal">取消</BitButton>
-            <BitButton Class="rag-primary-btn" AutoLoading OnClick="WrapHandled(AddKnowledgeBase)">确定</BitButton>
+            <BitButton AutoLoading OnClick="WrapHandled(AddKnowledgeBase)">确定</BitButton>
         </div>
     </div>
 </BitModal>
@@ -382,7 +382,7 @@
         </div>
         <div class="rag-modal-footer">
             <BitButton Variant="BitVariant.Outline" OnClick="CloseEditKnowledgeBaseModal">取消</BitButton>
-            <BitButton Class="rag-primary-btn" AutoLoading OnClick="WrapHandled(UpdateCurrentKnowledgeBase)">保存</BitButton>
+            <BitButton AutoLoading OnClick="WrapHandled(UpdateCurrentKnowledgeBase)">保存</BitButton>
         </div>
     </div>
 </BitModal>
@@ -404,7 +404,7 @@
         </div>
         <div class="rag-modal-footer">
             <BitButton Variant="BitVariant.Outline" OnClick="CloseDocumentModal">取消</BitButton>
-            <BitButton Class="rag-primary-btn" AutoLoading OnClick="WrapHandled(editingDocumentId is null ? AddDocument : SaveEditedDocument)">保存</BitButton>
+            <BitButton AutoLoading OnClick="WrapHandled(editingDocumentId is null ? AddDocument : SaveEditedDocument)">保存</BitButton>
         </div>
     </div>
 </BitModal>
@@ -423,7 +423,7 @@
                 <li>在“召回调试”中输入问题，测试召回准确率。</li>
             </ul>
             <div class="rag-panel-actions">
-                <BitButton Class="rag-primary-btn" OnClick="FillTutorialExample">一键填充测试数据</BitButton>
+                <BitButton OnClick="FillTutorialExample">一键填充测试数据</BitButton>
             </div>
         </div>
     </Body>
@@ -447,7 +447,7 @@
                 <BitText Typography="BitTypography.Subtitle2" Color="BitColor.SecondaryForeground">注：修改规则仅对新录入文档生效。</BitText>
                 
                 <div class="rag-panel-actions">
-                    <BitButton Class="rag-primary-btn" AutoLoading IsLoading="isSavingChunkingOptions" OnClick="WrapHandled(SaveChunkingOptions)">保存配置</BitButton>
+                    <BitButton AutoLoading IsLoading="isSavingChunkingOptions" OnClick="WrapHandled(SaveChunkingOptions)">保存配置</BitButton>
                 </div>
             </div>
         }
