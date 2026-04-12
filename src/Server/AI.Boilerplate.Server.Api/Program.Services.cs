@@ -1,4 +1,4 @@
-﻿﻿﻿﻿using System.Net;
+﻿﻿﻿﻿﻿﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -450,6 +450,24 @@ public static partial class Program
             .UseLogging()
             .UseOpenTelemetry();
             // .UseDistributedCache()
+        }
+
+        // 注册视觉模型客户端（用于图片识别）
+        if (string.IsNullOrEmpty(appSettings.AI?.OpenAI?.VisionApiKey) is false)
+        {
+            var visionModelId = appSettings.AI.OpenAI.VisionModel;
+            var visionEndpoint = appSettings.AI.OpenAI.VisionEndpoint;
+
+            services.AddChatClient(sp => new OpenAI.Chat.ChatClient(model: visionModelId, credential: new(appSettings.AI.OpenAI.VisionApiKey),
+ options: new()
+            {
+                Endpoint = visionEndpoint,
+                NetworkTimeout = TimeSpan.FromMinutes(10),
+                Transport = new HttpClientPipelineTransport(sp.GetRequiredService<IHttpClientFactory>().CreateClient("AI"))
+            }).AsIChatClient())
+            .UseLogging()
+            .UseFunctionInvocation()
+            .UseOpenTelemetry();
         }
         else if (string.IsNullOrEmpty(appSettings.AI?.AzureOpenAI?.EmbeddingApiKey) is false)
         {

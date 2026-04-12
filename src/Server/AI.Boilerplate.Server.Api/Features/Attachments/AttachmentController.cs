@@ -229,6 +229,20 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
                     };
 
                     configuration.GetRequiredSection("AI:ChatOptions").Bind(chatOptions);
+                    var visionModelId = configuration["AI:OpenAI:VisionModel"] ?? configuration["AI:AzureOpenAI:VisionModel"];
+                    if (!string.IsNullOrWhiteSpace(visionModelId))
+                    {
+                        chatOptions.ModelId = visionModelId;
+                    }
+
+                    var visionEndpoint = configuration["AI:OpenAI:VisionEndpoint"] ?? configuration["AI:AzureOpenAI:VisionEndpoint"];
+                    if (!string.IsNullOrWhiteSpace(visionEndpoint))
+                    {
+                        chatOptions.AdditionalProperties ??= new();
+                        chatOptions.AdditionalProperties["Endpoint"] = new Uri(visionEndpoint);
+                    }
+
+                    Console.WriteLine($"\n[AI VisionModel Calling]: {nameof(UploadAttachment)} | Model: {chatOptions.ModelId ?? "default"} | Endpoint: {visionEndpoint ?? "default"}");
 
                     var response = await imageAnalysisAgent.RunAsync<AIImageReviewResponse>(
                         messages: [

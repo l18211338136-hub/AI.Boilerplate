@@ -155,6 +155,10 @@ public class OpenAIOptions
     public Uri? ChatEndpoint { get; set; }
     public string? ChatApiKey { get; set; }
 
+    public string? VisionModel { get; set; }
+    public Uri? VisionEndpoint { get; set; }
+    public string? VisionApiKey { get; set; }
+
     public string? EmbeddingModel { get; set; }
     public Uri? EmbeddingEndpoint { get; set; }
     public string? EmbeddingApiKey { get; set; }
