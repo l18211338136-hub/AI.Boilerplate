@@ -109,6 +109,50 @@ namespace AI.Boilerplate.Server.Api.Migrations
                         });
                 });
 
+            modelBuilder.Entity("AI.Boilerplate.Server.Api.Features.AreaCodes.AreaCode", b =>
+                {
+                    b.Property<long>("Code")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("bigint")
+                        .HasColumnName("Code")
+                        .HasComment("区划代码");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<long>("Code"));
+
+                    b.Property<int>("Category")
+                        .HasColumnType("integer")
+                        .HasColumnName("Category")
+                        .HasComment("城乡分类");
+
+                    b.Property<short>("Level")
+                        .HasColumnType("smallint")
+                        .HasColumnName("Level")
+                        .HasComment("级别1-5,省市县镇村");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .ValueGeneratedOnAdd()
+                        .HasMaxLength(128)
+                        .HasColumnType("character varying(128)")
+                        .HasDefaultValue("")
+                        .HasColumnName("Name")
+                        .HasComment("名称");
+
+                    b.Property<long?>("Pcode")
+                        .HasColumnType("bigint")
+                        .HasColumnName("Pcode")
+                        .HasComment("父级区划代码");
+
+                    b.HasKey("Code");
+
+                    b.HasIndex("Pcode");
+
+                    b.ToTable("AreaCodes", null, t =>
+                        {
+                            t.HasComment("行政区划代码表");
+                        });
+                });
+
             modelBuilder.Entity("AI.Boilerplate.Server.Api.Features.Attachments.Attachment", b =>
                 {
                     b.Property<Guid>("Id")
@@ -2456,6 +2500,14 @@ namespace AI.Boilerplate.Server.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("AI.Boilerplate.Server.Api.Features.AreaCodes.AreaCode", b =>
+                {
+                    b.HasOne("AI.Boilerplate.Server.Api.Features.AreaCodes.AreaCode", null)
+                        .WithMany()
+                        .HasForeignKey("Pcode")
+                        .HasConstraintName("FK_AreaCode_ParentCode");
                 });
 
             modelBuilder.Entity("AI.Boilerplate.Server.Api.Features.CartItems.CartItem", b =>

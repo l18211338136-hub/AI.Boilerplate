@@ -1,4 +1,5 @@
 ﻿using AI.Boilerplate.Server.Api.Features.Addresses;
+using AI.Boilerplate.Server.Api.Features.AreaCodes;
 using AI.Boilerplate.Server.Api.Features.Attachments;
 using AI.Boilerplate.Server.Api.Features.CartItems;
 using AI.Boilerplate.Server.Api.Features.Categories;
@@ -51,7 +52,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     public DbSet<Inventory> Inventories { get; set; } = default!;
     public DbSet<ProductReview> ProductReviews { get; set; } = default!;
     public DbSet<Payment> Payments { get; set; } = default!;
-
+    public DbSet<AreaCode> AreaCodes { get; set; } = default!;
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         base.OnModelCreating(modelBuilder);
