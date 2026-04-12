@@ -645,6 +645,7 @@ LEFT JOIN pg_catalog.pg_class ref_c ON ref_c.oid = fk.referenced_table_id
 LEFT JOIN pg_catalog.pg_namespace ref_n ON ref_n.oid = ref_c.relnamespace
 WHERE
     n.nspname NOT IN ('pg_catalog', 'information_schema','jobs')
+    AND c.relname NOT IN ('__EFMigrationsHistory','RagChunkingSettings','RagChunks','RagDocuments','RagKnowledgeBases','SystemPrompts','WebAuthnCredential')
     AND a.attnum > 0
     AND NOT a.attisdropped
     AND c.relkind = 'r' 
