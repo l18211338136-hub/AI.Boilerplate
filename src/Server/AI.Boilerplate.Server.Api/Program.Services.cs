@@ -262,7 +262,7 @@ public static partial class Program
                     maxRetryCount: 3,
                     maxRetryDelay: TimeSpan.FromSeconds(30),
                     errorCodesToAdd: null);
-            });
+            }).ReplaceService<IMigrationsSqlGenerator, CustomMigrationsSqlGenerator>();
         }
 
 
