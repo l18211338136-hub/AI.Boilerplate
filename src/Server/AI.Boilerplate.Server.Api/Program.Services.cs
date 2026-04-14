@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿﻿using System.Net;
+﻿﻿﻿﻿﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -32,6 +32,10 @@ using AI.Boilerplate.Server.Api.Features.PushNotification;
 using AI.Boilerplate.Server.Api.Infrastructure.Services;
 using AI.Boilerplate.Server.Api.Features.Products;
 using AI.Boilerplate.Server.Api.Features.Rag;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Seed;
+using AI.Boilerplate.Server.Api.Features.Categories;
+using AI.Boilerplate.Server.Api.Features.Chatbot;
+using AI.Boilerplate.Server.Api.Features.Identity;
 
 namespace AI.Boilerplate.Server.Api;
 
@@ -71,6 +75,12 @@ public static partial class Program
         {
             TwilioClient.Init(appSettings.Sms.TwilioAccountSid, appSettings.Sms.TwilioAutoToken);
         }
+
+        services.AddScoped<SeedDataService>();
+        services.AddScoped<IDataSeeder, CategorySeeder>();
+        services.AddScoped<IDataSeeder, ProductSeeder>();
+        services.AddScoped<IDataSeeder, IdentitySeeder>();
+        services.AddScoped<IDataSeeder, SystemPromptSeeder>();
 
         services.AddSingleton(_ => PhoneNumberUtil.GetInstance());
         services.AddSingleton<IBlobStorage>(sp =>

@@ -1,4 +1,5 @@
 ﻿using AI.Boilerplate.Server.Api.Features.Products;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Seed;
 
 namespace AI.Boilerplate.Server.Api;
 
@@ -24,6 +25,9 @@ public static partial class Program
             await using var scope = app.Services.CreateAsyncScope();
             var dbContext = scope.ServiceProvider.GetRequiredService<AppDbContext>();
             await dbContext.Database.MigrateAsync(); // It's recommended to start using ef-core migrations.
+            
+            var seedDataService = scope.ServiceProvider.GetRequiredService<SeedDataService>();
+            await seedDataService.SeedAsync();
         }
 
         app.ConfigureMiddlewares();
