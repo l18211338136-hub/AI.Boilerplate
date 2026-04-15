@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using AI.Boilerplate.Server.Api.Features.Products;
 
 namespace AI.Boilerplate.Server.Api.Features.Inventories;
 
-public partial class Inventory
+public partial class Inventory : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -28,7 +29,4 @@ public partial class Inventory
     [Comment("低库存预警阈值")]
     public int LowStockThreshold { get; set; }
 
-    [Required]
-    [Comment("最后更新时间")]
-    public DateTimeOffset UpdatedOn { get; set; } = DateTimeOffset.UtcNow;
 }

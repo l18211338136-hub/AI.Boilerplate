@@ -48,7 +48,7 @@ public partial class TodoItemController : AppControllerBase, ITodoItemController
 
         entityToAdd.UserId = User.GetUserId();
 
-        entityToAdd.UpdatedAt = DateTimeOffset.UtcNow;
+        entityToAdd.ModifiedOn = DateTimeOffset.UtcNow;
 
         await DbContext.TodoItems.AddAsync(entityToAdd, cancellationToken);
 
@@ -81,4 +81,5 @@ public partial class TodoItemController : AppControllerBase, ITodoItemController
             throw new ResourceNotFoundException(Localizer[nameof(AppStrings.ToDoItemCouldNotBeFound)]);
     }
 }
+
 

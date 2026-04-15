@@ -1,8 +1,9 @@
-﻿using AI.Boilerplate.Shared.Features.Chatbot;
+using AI.Boilerplate.Shared.Features.Chatbot;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
 namespace AI.Boilerplate.Server.Api.Features.Chatbot;
 
-public class SystemPrompt
+public class SystemPrompt : AuditEntity
 {
     public Guid Id { get; set; }
 

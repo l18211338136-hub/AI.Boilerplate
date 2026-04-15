@@ -14,5 +14,13 @@ public class UserTokenConfiguration : IEntityTypeConfiguration<UserToken>
         builder.Property(t => t.LoginProvider).HasComment("登录提供商(如: Default, Authenticator)");
         builder.Property(t => t.Name).HasComment("令牌名称(如: PasswordResetToken, TwoFactorToken)");
         builder.Property(t => t.Value).HasComment("令牌的具体值");
+        
+        builder.Property(t => t.CreatedOn).HasComment("创建时间");
+        builder.Property(t => t.CreatedBy).HasComment("创建人ID");
+        builder.Property(t => t.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(t => t.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
     }
 }

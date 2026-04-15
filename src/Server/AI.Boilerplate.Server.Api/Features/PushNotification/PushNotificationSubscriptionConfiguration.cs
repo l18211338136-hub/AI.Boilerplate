@@ -16,6 +16,14 @@ public class PushNotificationSubscriptionConfiguration : IEntityTypeConfiguratio
         builder.Property(sub => sub.Tags).HasComment("订阅标签");
         builder.Property(sub => sub.ExpirationTime).HasComment("过期时间(Unix秒)");
         builder.Property(sub => sub.RenewedOn).HasComment("续订时间(Unix秒)");
+        
+        builder.Property(sub => sub.CreatedOn).HasComment("创建时间");
+        builder.Property(sub => sub.CreatedBy).HasComment("创建人ID");
+        builder.Property(sub => sub.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(sub => sub.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(sub => sub.IsDeleted).HasComment("是否删除");
+        builder.Property(sub => sub.DeletedOn).HasComment("删除时间");
+        builder.Property(sub => sub.DeletedBy).HasComment("删除人ID");
 
         builder
             .HasOne(sub => sub.UserSession)

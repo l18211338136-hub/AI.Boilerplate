@@ -1,6 +1,8 @@
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+
 namespace AI.Boilerplate.Server.Api.Features.Rag;
 
-public class RagKnowledgeBase
+public class RagKnowledgeBase : AuditEntity
 {
     public Guid Id { get; set; }
 
@@ -19,14 +21,6 @@ public class RagKnowledgeBase
     public int EmbeddingDimension { get; set; } = 768;
 
     public bool IsEnabled { get; set; } = true;
-
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
-
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-
-    public bool IsDeleted { get; set; }
-
-    public DateTimeOffset? DeletedOn { get; set; }
 
     public List<RagDocument> Documents { get; set; } = [];
 }

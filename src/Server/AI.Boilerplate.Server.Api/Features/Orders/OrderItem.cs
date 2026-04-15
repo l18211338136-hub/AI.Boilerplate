@@ -1,10 +1,11 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using AI.Boilerplate.Server.Api.Features.Products;
 
 namespace AI.Boilerplate.Server.Api.Features.Orders;
 
-public partial class OrderItem
+public partial class OrderItem : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]

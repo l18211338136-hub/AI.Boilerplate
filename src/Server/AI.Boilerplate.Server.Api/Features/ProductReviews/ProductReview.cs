@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
 using AI.Boilerplate.Server.Api.Features.Orders;
@@ -6,7 +7,7 @@ using AI.Boilerplate.Server.Api.Features.Products;
 
 namespace AI.Boilerplate.Server.Api.Features.ProductReviews;
 
-public partial class ProductReview
+public partial class ProductReview : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -42,7 +43,4 @@ public partial class ProductReview
     [Comment("是否匿名显示")]
     public bool IsAnonymous { get; set; }
 
-    [Required]
-    [Comment("评价时间")]
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
 }

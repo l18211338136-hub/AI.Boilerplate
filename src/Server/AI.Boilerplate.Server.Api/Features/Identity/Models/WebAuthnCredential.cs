@@ -1,3 +1,4 @@
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 using Fido2NetLib.Objects;
 
 namespace AI.Boilerplate.Server.Api.Features.Identity.Models;
@@ -7,7 +8,7 @@ namespace AI.Boilerplate.Server.Api.Features.Identity.Models;
 /// <br />
 /// More info: <see href="https://github.com/passwordless-lib/fido2-net-lib"/>
 /// </summary>
-public class WebAuthnCredential
+public class WebAuthnCredential : AuditEntity
 {
     public required byte[] Id { get; set; }
     public Guid UserId { get; set; }
@@ -32,8 +33,6 @@ public class WebAuthnCredential
     public byte[]? UserHandle { get; set; }
 
     public string? AttestationFormat { get; set; }
-
-    public DateTimeOffset RegDate { get; set; }
 
     public Guid AaGuid { get; set; }
 }

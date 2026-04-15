@@ -1,4 +1,5 @@
-﻿using AI.Boilerplate.Server.Api.Features.Addresses;
+using System.Linq.Expressions;
+using AI.Boilerplate.Server.Api.Features.Addresses;
 using AI.Boilerplate.Server.Api.Features.AreaCodes;
 using AI.Boilerplate.Server.Api.Features.Attachments;
 using AI.Boilerplate.Server.Api.Features.CartItems;
@@ -12,13 +13,16 @@ using AI.Boilerplate.Server.Api.Features.Products;
 using AI.Boilerplate.Server.Api.Features.PushNotification;
 using AI.Boilerplate.Server.Api.Features.Rag;
 using AI.Boilerplate.Server.Api.Features.Todo;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 using AI.Boilerplate.Server.Api.Infrastructure.Data.Configurations;
+using AI.Boilerplate.Server.Api.Infrastructure.Services.Contracts;
 using Hangfire.EntityFrameworkCore;
 using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Query;
 
 namespace AI.Boilerplate.Server.Api.Infrastructure.Data;
 
-public partial class AppDbContext(DbContextOptions<AppDbContext> options)
+public partial class AppDbContext(DbContextOptions<AppDbContext> options, ICurrentUserService currentUserService)
     : IdentityDbContext<User, Role, Guid, UserClaim, UserRole, UserLogin, RoleClaim, UserToken>(options), IDataProtectionKeyContext
 {
     public DbSet<UserSession> UserSessions { get; set; } = default!;
@@ -76,6 +80,26 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
         ConfigureConcurrencyToken(modelBuilder);
 
         ConfigureRowVersion(modelBuilder);
+
+        ApplySoftDeleteQueryFilters(modelBuilder);
+    }
+
+    private void ApplySoftDeleteQueryFilters(ModelBuilder modelBuilder)
+    {
+        foreach (var entityType in modelBuilder.Model.GetEntityTypes())
+        {
+            if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType))
+            {
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(ConvertFilterExpression<ISoftDelete>(e => !e.IsDeleted, entityType.ClrType));
+            }
+        }
+    }
+
+    private static LambdaExpression ConvertFilterExpression<TInterface>(Expression<Func<TInterface, bool>> filterExpression, Type entityType)
+    {
+        var parameter = Expression.Parameter(entityType);
+        var body = ReplacingExpressionVisitor.Replace(filterExpression.Parameters[0], parameter, filterExpression.Body);
+        return Expression.Lambda(body, parameter);
     }
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
@@ -112,10 +136,47 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options)
     {
         ChangeTracker.DetectChanges();
 
-        foreach (var entry in ChangeTracker.Entries().Where(e => e.State is EntityState.Added or EntityState.Modified or EntityState.Deleted))
+        var userId = currentUserService.GetCurrentUserId();
+        var now = DateTimeOffset.UtcNow;
+
+        foreach (var entry in ChangeTracker.Entries<IAuditableEntity>())
         {
-            if (entry.Properties.Any(p => p.Metadata.Name == "UpdatedAt"))
-                entry.CurrentValues["UpdatedAt"] = DateTimeOffset.UtcNow;
+            if (entry.State == EntityState.Added)
+            {
+                entry.Entity.CreatedOn = now;
+                entry.Entity.CreatedBy = userId;
+            }
+            else if (entry.State == EntityState.Modified)
+            {
+                entry.Entity.ModifiedOn = now;
+                entry.Entity.ModifiedBy = userId;
+            }
+        }
+
+        foreach (var entry in ChangeTracker.Entries<ISoftDelete>())
+        {
+            if (entry.State == EntityState.Deleted)
+            {
+                entry.State = EntityState.Unchanged;
+                entry.Entity.IsDeleted = true;
+                entry.Property(nameof(ISoftDelete.IsDeleted)).IsModified = true;
+                
+                entry.Entity.DeletedOn = now;
+                entry.Property(nameof(ISoftDelete.DeletedOn)).IsModified = true;
+                
+                entry.Entity.DeletedBy = userId;
+                entry.Property(nameof(ISoftDelete.DeletedBy)).IsModified = true;
+
+                // Also update ModifiedOn for soft delete
+                if (entry.Entity is IAuditableEntity auditable)
+                {
+                    auditable.ModifiedOn = now;
+                    entry.Property(nameof(IAuditableEntity.ModifiedOn)).IsModified = true;
+                    
+                    auditable.ModifiedBy = userId;
+                    entry.Property(nameof(IAuditableEntity.ModifiedBy)).IsModified = true;
+                }
+            }
         }
 
         foreach (var entityEntry in ChangeTracker.Entries().Where(e => e.State is EntityState.Modified or EntityState.Deleted))

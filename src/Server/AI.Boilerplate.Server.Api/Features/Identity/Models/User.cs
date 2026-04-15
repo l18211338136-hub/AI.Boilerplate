@@ -1,9 +1,10 @@
-﻿using AI.Boilerplate.Server.Api.Features.Todo;
+using AI.Boilerplate.Server.Api.Features.Todo;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
 namespace AI.Boilerplate.Server.Api.Features.Identity.Models;
 
-public partial class User : IdentityUser<Guid>
+public partial class User : IdentityUser<Guid>, IAuditableEntity, ISoftDelete
 {
     [PersonalData]
     public string? FullName { get; set; }
@@ -47,4 +48,13 @@ public partial class User : IdentityUser<Guid>
     public List<UserToken> Tokens { get; set; } = [];
 
     public bool HasProfilePicture { get; set; }
+
+    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
+    public Guid? CreatedBy { get; set; }
+    public DateTimeOffset? ModifiedOn { get; set; }
+    public Guid? ModifiedBy { get; set; }
+
+    public bool IsDeleted { get; set; }
+    public DateTimeOffset? DeletedOn { get; set; }
+    public Guid? DeletedBy { get; set; }
 }

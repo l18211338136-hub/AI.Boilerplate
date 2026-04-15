@@ -1,4 +1,5 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using AI.Boilerplate.Server.Api.Features.Addresses;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
@@ -7,7 +8,7 @@ using AI.Boilerplate.Server.Api.Features.ProductReviews;
 
 namespace AI.Boilerplate.Server.Api.Features.Orders;
 
-public partial class Order
+public partial class Order : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -58,20 +59,8 @@ public partial class Order
     [Comment("买家备注")]
     public string? Remark { get; set; }
 
-    [Required]
-    [Comment("创建时间")]
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
-
-    [Required]
-    [Comment("更新时间")]
-    public DateTimeOffset UpdatedOn { get; set; } = DateTimeOffset.UtcNow;
-
     [Comment("支付成功时间")]
     public DateTimeOffset? PaidOn { get; set; }
-
-    [Required]
-    [Comment("逻辑删除标识")]
-    public bool IsDeleted { get; set; } = false;
 
     // 导航属性
     public IList<OrderItem> OrderItems { get; set; } = [];

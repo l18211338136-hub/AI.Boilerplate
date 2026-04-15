@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AI.Boilerplate.Server.Api.Features.Orders;
@@ -16,6 +16,14 @@ public partial class OrderItemConfiguration : IEntityTypeConfiguration<OrderItem
         builder.Property(p => p.Quantity).HasComment("购买数量");
         builder.Property(p => p.SubTotal).HasComment("行小计金额");
         builder.Property(p => p.PrimaryImageAltText).HasComment("下单时主图替代文本快照");
+        
+        builder.Property(p => p.CreatedOn).HasComment("创建时间");
+        builder.Property(p => p.CreatedBy).HasComment("创建人ID");
+        builder.Property(p => p.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(p => p.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
 
         // 订单ID索引，用于查询订单的所有商品
         builder.HasIndex(p => p.OrderId);

@@ -12,7 +12,12 @@ public class RagChunkConfiguration : IEntityTypeConfiguration<RagChunk>
         builder.Property(c => c.TokenCount).HasComment("令牌数量");
         builder.Property(c => c.Embedding).HasComment("向量嵌入").HasColumnType("vector(768)");
         builder.Property(c => c.CreatedOn).HasComment("创建时间");
-        builder.Property(c => c.UpdatedAt).HasComment("更新时间");
+        builder.Property(c => c.CreatedBy).HasComment("创建人ID");
+        builder.Property(c => c.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(c => c.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(c => c.IsDeleted).HasComment("是否删除");
+        builder.Property(c => c.DeletedOn).HasComment("删除时间");
+        builder.Property(c => c.DeletedBy).HasComment("删除人ID");
 
         builder.HasIndex(c => new { c.DocumentId, c.ChunkIndex }).IsUnique();
     }

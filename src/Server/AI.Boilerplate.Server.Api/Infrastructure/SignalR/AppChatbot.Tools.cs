@@ -272,7 +272,7 @@ public partial class AppChatbot
                 Title = title,
                 IsDone = false,
                 UserId = userId,
-                UpdatedAt = DateTimeOffset.UtcNow
+                ModifiedOn = DateTimeOffset.UtcNow
             };
 
             entity.Id ??= Guid.CreateVersion7().ToString();
@@ -310,7 +310,7 @@ public partial class AppChatbot
 
             var entity = await db.TodoItems
                 .Where(t => t.UserId == userId && t.Title == currentTitle)
-                .OrderByDescending(t => t.UpdatedAt)
+                .OrderByDescending(t => t.ModifiedOn)
                 .FirstOrDefaultAsync(CancellationToken.None)
                 ?? throw new ResourceNotFoundException("Todo item not found.");
 
@@ -319,7 +319,7 @@ public partial class AppChatbot
             if (isDone is not null)
                 entity.IsDone = isDone.Value;
 
-            entity.UpdatedAt = DateTimeOffset.UtcNow;
+            entity.ModifiedOn = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync(CancellationToken.None);
             await NotifyTodoItemsChanged();
 
@@ -397,7 +397,7 @@ public partial class AppChatbot
             };
 
             var result = await query
-                .OrderByDescending(t => t.UpdatedAt)
+                .OrderByDescending(t => t.ModifiedOn)
                 .Project()
                 .ToArrayAsync(CancellationToken.None);
             return result;
@@ -437,3 +437,4 @@ public partial class AppChatbot
         throw new UnauthorizedException("User must be authenticated to manage todo items.");
     }
 }
+

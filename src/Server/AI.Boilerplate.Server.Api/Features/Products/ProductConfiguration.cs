@@ -1,4 +1,4 @@
-﻿namespace AI.Boilerplate.Server.Api.Features.Products;
+namespace AI.Boilerplate.Server.Api.Features.Products;
 
 public partial class ProductConfiguration : IEntityTypeConfiguration<Product>
 {
@@ -12,6 +12,12 @@ public partial class ProductConfiguration : IEntityTypeConfiguration<Product>
         builder.Property(p => p.DescriptionHTML).HasComment("HTML 描述");
         builder.Property(p => p.DescriptionText).HasComment("纯文本描述");
         builder.Property(p => p.CreatedOn).HasComment("创建时间");
+        builder.Property(p => p.CreatedBy).HasComment("创建人ID");
+        builder.Property(p => p.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(p => p.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
         builder.Property(p => p.CategoryId).HasComment("类别 ID");
         builder.Property(p => p.Version).HasComment("并发版本");
         builder.Property(p => p.HasPrimaryImage).HasComment("是否有主图");

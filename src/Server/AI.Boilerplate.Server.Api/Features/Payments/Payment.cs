@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
 using AI.Boilerplate.Server.Api.Features.Orders;
 
 namespace AI.Boilerplate.Server.Api.Features.Payments;
 
-public partial class Payment
+public partial class Payment : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -44,7 +45,4 @@ public partial class Payment
     [Comment("支付成功时间")]
     public DateTimeOffset? PaidOn { get; set; }
 
-    [Required]
-    [Comment("记录创建时间")]
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
 }

@@ -1,9 +1,10 @@
-﻿using AI.Boilerplate.Server.Api.Features.Identity.Models;
+﻿using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using AI.Boilerplate.Server.Api.Features.Identity.Models;
 using StackExchange.Redis;
 
 namespace AI.Boilerplate.Server.Api.Features.Addresses;
 
-public partial class Address
+public partial class Address : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -52,14 +53,6 @@ public partial class Address
     [Required]
     [Comment("是否默认地址")]
     public bool IsDefault { get; set; }
-
-    [Required]
-    [Comment("创建时间")]
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
-
-    [Required]
-    [Comment("更新时间")]
-    public DateTimeOffset UpdatedOn { get; set; } = DateTimeOffset.UtcNow;
 
     // 导航属性
     public IList<Order> Orders { get; set; } = [];

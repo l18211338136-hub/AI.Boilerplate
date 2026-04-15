@@ -1,8 +1,10 @@
-﻿using AI.Boilerplate.Server.Api.Features.Products;
+using AI.Boilerplate.Server.Api.Features.Products;
+
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
 namespace AI.Boilerplate.Server.Api.Features.Categories;
 
-public partial class Category
+public partial class Category : AuditEntity
 {
     public Guid Id { get; set; }
 

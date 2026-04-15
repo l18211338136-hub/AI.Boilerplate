@@ -1,6 +1,8 @@
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+
 namespace AI.Boilerplate.Server.Api.Features.Rag;
 
-public class RagDocument
+public class RagDocument : AuditEntity
 {
     public Guid Id { get; set; }
 
@@ -19,14 +21,6 @@ public class RagDocument
     public string Title { get; set; } = string.Empty;
 
     public DateTimeOffset LastIndexedAt { get; set; } = DateTimeOffset.UtcNow;
-
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
-
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
-
-    public bool IsDeleted { get; set; }
-
-    public DateTimeOffset? DeletedOn { get; set; }
 
     public RagKnowledgeBase? KnowledgeBase { get; set; }
 

@@ -1,8 +1,9 @@
-﻿using AI.Boilerplate.Shared.Features.Attachments;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using AI.Boilerplate.Shared.Features.Attachments;
 
 namespace AI.Boilerplate.Server.Api.Features.Attachments;
 
-public partial class Attachment
+public partial class Attachment : AuditEntity
 {
     public Guid Id { get; set; }
 

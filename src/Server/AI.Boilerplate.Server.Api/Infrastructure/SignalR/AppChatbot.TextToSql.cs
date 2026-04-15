@@ -697,8 +697,7 @@ public partial class AppChatbot
             return "1";
 
         if (column.Name.Equals("CreatedOn", StringComparison.OrdinalIgnoreCase) ||
-            column.Name.Equals("CreatedAt", StringComparison.OrdinalIgnoreCase) ||
-            column.Name.Equals("UpdatedAt", StringComparison.OrdinalIgnoreCase))
+            column.Name.Equals("ModifiedOn", StringComparison.OrdinalIgnoreCase))
             return "NOW()";
 
         if (column.DataType.Equals("bool", StringComparison.OrdinalIgnoreCase) || 
@@ -951,12 +950,12 @@ public partial class AppChatbot
         }
     }
 
-    [Description("查询指定表的数据。whereJson 为 JSON 对象，仅支持等值过滤；orderBy 例如: UpdatedAt desc, Title asc。拿到执行结果后，必须严格按照返回的 JSON 里的 rows 字段的数据值来展示，绝对不要篡改或翻译数据值！")]
+    [Description("查询指定表的数据。whereJson 为 JSON 对象，仅支持等值过滤；orderBy 例如: ModifiedOn desc, Title asc。拿到执行结果后，必须严格按照返回的 JSON 里的 rows 字段的数据值来展示，绝对不要篡改或翻译数据值！")]
     [McpServerTool(Name = nameof(PgSelectRows))]
     private async Task<string> PgSelectRows(
         [Required, Description("表名，支持 table 或 schema.table")] string table,
         [Description("过滤条件 JSON，例如 {\"Title\":\"任务A\",\"IsDone\":false}")] string? whereJson = null,
-        [Description("排序字段，例如 UpdatedAt desc, Title asc")] string? orderBy = null,
+        [Description("排序字段，例如 ModifiedOn desc, Title asc")] string? orderBy = null,
         [Description("返回行数。除非用户指定，否则不要传此参数")] int limit = 1000,
         [Description("分页偏移，默认0")] int offset = 0)
     {

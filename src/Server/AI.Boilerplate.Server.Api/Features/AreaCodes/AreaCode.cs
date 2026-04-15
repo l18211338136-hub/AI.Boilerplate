@@ -1,6 +1,8 @@
-﻿namespace AI.Boilerplate.Server.Api.Features.AreaCodes;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
-public class AreaCode
+namespace AI.Boilerplate.Server.Api.Features.AreaCodes;
+
+public class AreaCode : AuditEntity
 {
     /// <summary>
     /// 区划代码

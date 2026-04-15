@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AI.Boilerplate.Server.Api.Features.ProductReviews;
@@ -15,7 +15,13 @@ public partial class ProductReviewConfiguration : IEntityTypeConfiguration<Produ
         builder.Property(p => p.Rating).HasComment("评分(1-5)");
         builder.Property(p => p.Comment).HasComment("评价内容");
         builder.Property(p => p.IsAnonymous).HasComment("是否匿名显示");
-        builder.Property(p => p.CreatedOn).HasComment("评价时间");
+        builder.Property(p => p.CreatedOn).HasComment("创建时间");
+        builder.Property(p => p.CreatedBy).HasComment("创建人ID");
+        builder.Property(p => p.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(p => p.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
 
         // 订单ID和产品ID的组合唯一索引，确保每个订单中的每个产品只能有一个评价
         builder.HasIndex(p => new { p.OrderId, p.ProductId }).IsUnique();

@@ -1,6 +1,8 @@
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+
 namespace AI.Boilerplate.Server.Api.Features.Rag;
 
-public class RagChunkingSetting
+public class RagChunkingSetting : AuditEntity
 {
     public Guid Id { get; set; }
 
@@ -9,8 +11,6 @@ public class RagChunkingSetting
     public bool PreferParagraphFirst { get; set; } = true;
 
     public int MinChunkCount { get; set; } = 1;
-
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public long Version { get; set; }
 }

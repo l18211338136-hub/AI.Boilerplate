@@ -1,4 +1,4 @@
-namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
+﻿namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
 
 public class RagKnowledgeBaseDto
 {
@@ -24,5 +24,5 @@ public class RagKnowledgeBaseDto
 
     public int ChunkCount { get; set; }
 
-    public DateTimeOffset UpdatedAt { get; set; }
+    public DateTimeOffset? ModifiedOn { get; set; }
 }

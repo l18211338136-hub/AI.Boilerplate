@@ -14,5 +14,13 @@ public class UserLoginConfiguration : IEntityTypeConfiguration<UserLogin>
         builder.Property(l => l.ProviderKey).HasComment("提供商分配的唯一标识(ProviderKey)");
         builder.Property(l => l.ProviderDisplayName).HasComment("提供商显示名称");
         builder.Property(l => l.UserId).HasComment("关联的用户ID");
+        
+        builder.Property(l => l.CreatedOn).HasComment("创建时间");
+        builder.Property(l => l.CreatedBy).HasComment("创建人ID");
+        builder.Property(l => l.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(l => l.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(l => l.IsDeleted).HasComment("是否删除");
+        builder.Property(l => l.DeletedOn).HasComment("删除时间");
+        builder.Property(l => l.DeletedBy).HasComment("删除人ID");
     }
 }

@@ -23,5 +23,13 @@ public class UserSessionConfiguration : IEntityTypeConfiguration<UserSession>
         builder.Property(s => s.PlatformType).HasComment("平台类型(App/Web等)");
         builder.Property(s => s.CultureName).HasComment("用户选择的语言文化");
         builder.Property(s => s.AppVersion).HasComment("应用程序版本号");
+        
+        builder.Property(s => s.CreatedOn).HasComment("创建时间");
+        builder.Property(s => s.CreatedBy).HasComment("创建人ID");
+        builder.Property(s => s.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(s => s.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(s => s.IsDeleted).HasComment("是否删除");
+        builder.Property(s => s.DeletedOn).HasComment("删除时间");
+        builder.Property(s => s.DeletedBy).HasComment("删除人ID");
     }
 }

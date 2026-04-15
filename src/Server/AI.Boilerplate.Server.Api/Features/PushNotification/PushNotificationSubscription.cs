@@ -1,8 +1,9 @@
-using AI.Boilerplate.Server.Api.Features.Identity.Models;
+﻿using AI.Boilerplate.Server.Api.Features.Identity.Models;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
 namespace AI.Boilerplate.Server.Api.Features.PushNotification;
 
-public class PushNotificationSubscription
+public class PushNotificationSubscription : AuditEntity
 {
     public int Id { get; set; }
 

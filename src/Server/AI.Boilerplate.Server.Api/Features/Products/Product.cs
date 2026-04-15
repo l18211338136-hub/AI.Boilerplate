@@ -1,8 +1,10 @@
-﻿using AI.Boilerplate.Server.Api.Features.Categories;
+using AI.Boilerplate.Server.Api.Features.Categories;
+
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
 namespace AI.Boilerplate.Server.Api.Features.Products;
 
-public partial class Product
+public partial class Product : AuditEntity
 {
     public Guid Id { get; set; }
 
@@ -23,8 +25,6 @@ public partial class Product
 
     [MaxLength(4096)]
     public string? DescriptionText { get; set; }
-
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
 
     [ForeignKey(nameof(CategoryId))]
     public Category? Category { get; set; }

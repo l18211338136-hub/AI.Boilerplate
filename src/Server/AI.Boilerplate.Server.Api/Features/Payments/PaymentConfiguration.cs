@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AI.Boilerplate.Server.Api.Features.Payments;
@@ -16,7 +16,14 @@ public partial class PaymentConfiguration : IEntityTypeConfiguration<Payment>
         builder.Property(p => p.TransactionId).HasComment("第三方支付平台流水号");
         builder.Property(p => p.Status).HasComment("支付状态(0:待支付 1:成功 2:失败 3:已退款)");
         builder.Property(p => p.PaidOn).HasComment("支付成功时间");
-        builder.Property(p => p.CreatedOn).HasComment("记录创建时间");
+        
+        builder.Property(p => p.CreatedOn).HasComment("创建时间");
+        builder.Property(p => p.CreatedBy).HasComment("创建人ID");
+        builder.Property(p => p.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(p => p.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
 
         // 订单ID索引，用于查询订单的所有支付记录
         builder.HasIndex(p => p.OrderId);

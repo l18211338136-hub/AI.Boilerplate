@@ -484,7 +484,7 @@
                             <div class="rag-recycle-info">
                                 <BitText Typography="BitTypography.Subtitle1" Class="rag-recycle-title">@item.Title</BitText>
                                 <BitText Typography="BitTypography.Body2" Color="BitColor.SecondaryForeground" Class="rag-recycle-meta">
-                                    @(item.ItemType == "KnowledgeBase" ? "知识库" : "文档") · 删除于 @item.DeletedOn.ToString("yyyy-MM-dd HH:mm")
+                                    @(item.ItemType == "KnowledgeBase" ? "知识库" : "文档") · 删除于 @item.DeletedOn?.ToString("yyyy-MM-dd HH:mm")
                                 </BitText>
                             </div>
                         </div>

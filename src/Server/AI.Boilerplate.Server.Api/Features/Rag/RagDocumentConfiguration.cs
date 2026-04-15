@@ -12,9 +12,12 @@ public class RagDocumentConfiguration : IEntityTypeConfiguration<RagDocument>
         builder.Property(d => d.Title).HasComment("文档标题");
         builder.Property(d => d.LastIndexedAt).HasComment("最后索引时间");
         builder.Property(d => d.CreatedOn).HasComment("创建时间");
-        builder.Property(d => d.UpdatedAt).HasComment("更新时间");
+        builder.Property(d => d.CreatedBy).HasComment("创建人ID");
+        builder.Property(d => d.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(d => d.ModifiedBy).HasComment("最后修改人ID");
         builder.Property(d => d.IsDeleted).HasComment("是否删除");
         builder.Property(d => d.DeletedOn).HasComment("删除时间");
+        builder.Property(d => d.DeletedBy).HasComment("删除人ID");
 
         builder.HasIndex(d => new { d.KnowledgeBaseId, d.SourceType, d.SourceId }).IsUnique();
 

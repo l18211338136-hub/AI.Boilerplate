@@ -30,7 +30,7 @@ public class RagManagementStore
         var list = await dbContext.RagKnowledgeBases
             .AsNoTracking()
             .Where(k => k.IsDeleted == false)
-            .OrderByDescending(k => k.UpdatedAt)
+            .OrderByDescending(k => k.ModifiedOn)
             .Select(k => new RagKnowledgeBaseDto
             {
                 Id = k.Id,
@@ -41,7 +41,7 @@ public class RagManagementStore
                 IsEnabled = k.IsEnabled,
                 DocumentCount = dbContext.RagDocuments.Count(d => d.KnowledgeBaseId == k.Id && d.IsDeleted == false),
                 ChunkCount = dbContext.RagChunks.Count(c => c.Document!.KnowledgeBaseId == k.Id && c.Document.IsDeleted == false),
-                UpdatedAt = k.UpdatedAt
+                ModifiedOn = k.ModifiedOn
             })
             .ToListAsync(cancellationToken);
 
@@ -84,7 +84,7 @@ public class RagManagementStore
             IsEnabled = entity.IsEnabled,
             DocumentCount = 0,
             ChunkCount = 0,
-            UpdatedAt = entity.UpdatedAt
+            ModifiedOn = entity.ModifiedOn
         };
     }
 
@@ -108,7 +108,7 @@ public class RagManagementStore
         entity.Name = dto.Name.Trim();
         entity.EmbeddingModel = dto.EmbeddingModel.Trim();
         entity.EmbeddingDimension = dto.EmbeddingDimension;
-        entity.UpdatedAt = DateTimeOffset.UtcNow;
+        entity.ModifiedOn = DateTimeOffset.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -122,7 +122,7 @@ public class RagManagementStore
             IsEnabled = entity.IsEnabled,
             DocumentCount = await dbContext.RagDocuments.CountAsync(d => d.KnowledgeBaseId == entity.Id && d.IsDeleted == false, cancellationToken),
             ChunkCount = await dbContext.RagChunks.CountAsync(c => c.Document!.KnowledgeBaseId == entity.Id && c.Document.IsDeleted == false, cancellationToken),
-            UpdatedAt = entity.UpdatedAt
+            ModifiedOn = entity.ModifiedOn
         };
     }
 
@@ -135,14 +135,14 @@ public class RagManagementStore
 
         entity.IsDeleted = true;
         entity.DeletedOn = DateTimeOffset.UtcNow;
-        entity.UpdatedAt = DateTimeOffset.UtcNow;
+        entity.ModifiedOn = DateTimeOffset.UtcNow;
 
         var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId && d.IsDeleted == false).ToListAsync(cancellationToken);
         foreach (var doc in documents)
         {
             doc.IsDeleted = true;
             doc.DeletedOn = entity.DeletedOn;
-            doc.UpdatedAt = entity.DeletedOn.Value;
+            doc.ModifiedOn = entity.DeletedOn.Value;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -157,14 +157,14 @@ public class RagManagementStore
 
         entity.IsDeleted = false;
         entity.DeletedOn = null;
-        entity.UpdatedAt = DateTimeOffset.UtcNow;
+        entity.ModifiedOn = DateTimeOffset.UtcNow;
 
         var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId && d.IsDeleted).ToListAsync(cancellationToken);
         foreach (var doc in documents)
         {
             doc.IsDeleted = false;
             doc.DeletedOn = null;
-            doc.UpdatedAt = entity.UpdatedAt;
+            doc.ModifiedOn = entity.ModifiedOn;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -251,11 +251,11 @@ public class RagManagementStore
             TokenCount = CountTokens(text),
             Embedding = new Vector(vectors[index]),
             CreatedOn = now,
-            UpdatedAt = now
+            ModifiedOn = now
         }).ToList();
 
         await dbContext.RagChunks.AddRangeAsync(chunkEntities, cancellationToken);
-        knowledgeBase.UpdatedAt = now;
+        knowledgeBase.ModifiedOn = now;
         await dbContext.SaveChangesAsync(cancellationToken);
 
         return new RagDocumentDto
@@ -333,7 +333,7 @@ public class RagManagementStore
                 TokenCount = CountTokens(text),
                 Embedding = new Vector(vectors[index]),
                 CreatedOn = now,
-                UpdatedAt = now
+                ModifiedOn = now
             }).ToList();
 
             await dbContext.RagChunks.AddRangeAsync(chunkEntities, cancellationToken);
@@ -341,7 +341,7 @@ public class RagManagementStore
 
         document.LastIndexedAt = now;
         if (document.KnowledgeBase is not null)
-            document.KnowledgeBase.UpdatedAt = now;
+            document.KnowledgeBase.ModifiedOn = now;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -357,7 +357,7 @@ public class RagManagementStore
 
         document.IsDeleted = true;
         document.DeletedOn = DateTimeOffset.UtcNow;
-        document.UpdatedAt = document.DeletedOn.Value;
+        document.ModifiedOn = document.DeletedOn.Value;
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -372,7 +372,7 @@ public class RagManagementStore
 
         document.IsDeleted = false;
         document.DeletedOn = null;
-        document.UpdatedAt = DateTimeOffset.UtcNow;
+        document.ModifiedOn = DateTimeOffset.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -402,7 +402,7 @@ public class RagManagementStore
                 KnowledgeBaseId = k.Id,
                 Title = k.Name,
                 Description = k.Code,
-                DeletedOn = k.DeletedOn ?? k.UpdatedAt
+                DeletedOn = k.DeletedOn ?? k.ModifiedOn
             })
             .ToListAsync(cancellationToken);
 
@@ -416,7 +416,7 @@ public class RagManagementStore
                 KnowledgeBaseId = d.KnowledgeBaseId,
                 Title = d.Title,
                 Description = $"{d.SourceType}/{d.SourceId}",
-                DeletedOn = d.DeletedOn ?? d.UpdatedAt
+                DeletedOn = d.DeletedOn ?? d.ModifiedOn
             })
             .ToListAsync(cancellationToken);
 
@@ -546,7 +546,7 @@ public class RagManagementStore
         setting.MaxChunkLength = Math.Clamp(dto.MaxChunkLength, 100, 4000);
         setting.PreferParagraphFirst = dto.PreferParagraphFirst;
         setting.MinChunkCount = Math.Clamp(dto.MinChunkCount, 1, 20);
-        setting.UpdatedAt = DateTimeOffset.UtcNow;
+        setting.ModifiedOn = DateTimeOffset.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
 
@@ -586,7 +586,7 @@ public class RagManagementStore
                 EmbeddingDimension = 768,
                 IsEnabled = true,
                 CreatedOn = now,
-                UpdatedAt = now
+                ModifiedOn = now
             };
             await dbContext.RagKnowledgeBases.AddAsync(knowledgeBase);
             await dbContext.SaveChangesAsync(cancellationToken);
@@ -599,7 +599,7 @@ public class RagManagementStore
                 SourceId = "db:schema",
                 Title = "数据库 Schema 结构",
                 CreatedOn = now,
-                UpdatedAt = now
+                ModifiedOn = now
             };
 
             await dbContext.RagDocuments.AddAsync(document);
@@ -751,7 +751,7 @@ ORDER BY
                     TokenCount = CountTokens(text),
                     Embedding = new Vector(Normalize(embeddings.Vector.ToArray())),
                     CreatedOn = now,
-                    UpdatedAt = now
+                    ModifiedOn = now
                 });
                 chunkIndex++;
             }
@@ -846,7 +846,7 @@ ORDER BY
             MaxChunkLength = defaults.MaxChunkLength,
             PreferParagraphFirst = defaults.PreferParagraphFirst,
             MinChunkCount = defaults.MinChunkCount,
-            UpdatedAt = DateTimeOffset.UtcNow
+            ModifiedOn = DateTimeOffset.UtcNow
         };
         await dbContext.RagChunkingSettings.AddAsync(created, cancellationToken);
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -989,3 +989,4 @@ ORDER BY
         return connection;
     }
 }
+

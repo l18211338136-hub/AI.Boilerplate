@@ -1,4 +1,4 @@
-using System.Text;
+﻿using System.Text;
 using Fido2NetLib;
 using Fido2NetLib.Objects;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
@@ -91,7 +91,7 @@ public partial class UserController
             PublicKey = credential.PublicKey,
             UserHandle = credential.User.Id,
             SignCount = credential.SignCount,
-            RegDate = DateTimeOffset.UtcNow,
+            CreatedOn = DateTimeOffset.UtcNow,
             AaGuid = credential.AaGuid,
             Transports = credential.Transports,
             AttestationFormat = credential.AttestationFormat,
@@ -131,3 +131,4 @@ public partial class UserController
         return count <= 0;
     }
 }
+

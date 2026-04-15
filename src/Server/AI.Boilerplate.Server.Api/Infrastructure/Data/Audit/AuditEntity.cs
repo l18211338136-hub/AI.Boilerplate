@@ -1,13 +1,7 @@
-using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+namespace AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
-namespace AI.Boilerplate.Server.Api.Features.Identity.Models;
-
-public class UserRole : IdentityUserRole<Guid>, IAuditableEntity, ISoftDelete
+public abstract class AuditEntity : IAuditableEntity, ISoftDelete
 {
-    public User? User { get; set; }
-
-    public Role? Role { get; set; }
-
     public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
     public Guid? CreatedBy { get; set; }
     public DateTimeOffset? ModifiedOn { get; set; }

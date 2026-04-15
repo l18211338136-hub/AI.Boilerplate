@@ -1,8 +1,9 @@
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 using Pgvector;
 
 namespace AI.Boilerplate.Server.Api.Features.Rag;
 
-public class RagChunk
+public class RagChunk : AuditEntity
 {
     public Guid Id { get; set; }
 
@@ -16,10 +17,6 @@ public class RagChunk
     public int TokenCount { get; set; }
 
     public Vector? Embedding { get; set; }
-
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
-
-    public DateTimeOffset UpdatedAt { get; set; } = DateTimeOffset.UtcNow;
 
     public RagDocument? Document { get; set; }
 }

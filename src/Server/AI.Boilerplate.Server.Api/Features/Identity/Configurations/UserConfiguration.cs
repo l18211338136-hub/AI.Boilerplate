@@ -35,6 +35,14 @@ public partial class UserConfiguration : IEntityTypeConfiguration<User>
         builder.Property(user => user.LockoutEnd).HasComment("账号锁定结束时间");
         builder.Property(user => user.LockoutEnabled).HasComment("是否允许账号锁定");
         builder.Property(user => user.AccessFailedCount).HasComment("登录失败次数");
+        
+        builder.Property(user => user.CreatedOn).HasComment("创建时间");
+        builder.Property(user => user.CreatedBy).HasComment("创建人ID");
+        builder.Property(user => user.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(user => user.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(user => user.IsDeleted).HasComment("是否删除");
+        builder.Property(user => user.DeletedOn).HasComment("删除时间");
+        builder.Property(user => user.DeletedBy).HasComment("删除人ID");
 
         builder.HasMany(user => user.Roles)
             .WithOne(ur => ur.User)

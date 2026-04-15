@@ -1,4 +1,4 @@
-using AI.Boilerplate.Shared.Features.Todo;
+﻿using AI.Boilerplate.Shared.Features.Todo;
 
 namespace AI.Boilerplate.Client.Core.Components.Pages;
 
@@ -73,12 +73,12 @@ public partial class TodoPage
         if (isDescendingSort)
         {
             items = items.OrderByDescendingIf(selectedSort == nameof(AppStrings.Alphabetical), t => t.Title!)
-                         .OrderByDescendingIf(selectedSort == nameof(AppStrings.Date), t => t.UpdatedAt!);
+                         .OrderByDescendingIf(selectedSort == nameof(AppStrings.Date), t => t.ModifiedOn!);
         }
         else
         {
             items = items.OrderByIf(selectedSort == nameof(AppStrings.Alphabetical), t => t.Title!)
-                         .OrderByIf(selectedSort == nameof(AppStrings.Date), t => t.UpdatedAt!);
+                         .OrderByIf(selectedSort == nameof(AppStrings.Date), t => t.ModifiedOn!);
         }
         viewTodoItems = items.ToList();
     }

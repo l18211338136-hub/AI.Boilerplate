@@ -1,11 +1,12 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
 using AI.Boilerplate.Server.Api.Features.Products;
 
 namespace AI.Boilerplate.Server.Api.Features.CartItems;
 
-public partial class CartItem
+public partial class CartItem : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -31,11 +32,4 @@ public partial class CartItem
     [Comment("结算是否勾选")]
     public bool Selected { get; set; }
 
-    [Required]
-    [Comment("加入购物车时间")]
-    public DateTimeOffset AddedOn { get; set; } = DateTimeOffset.UtcNow;
-
-    [Required]
-    [Comment("更新时间")]
-    public DateTimeOffset UpdatedOn { get; set; } = DateTimeOffset.UtcNow;
 }

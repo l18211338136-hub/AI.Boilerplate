@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AI.Boilerplate.Server.Api.Features.Products;
@@ -15,6 +15,12 @@ public partial class ProductImageConfiguration : IEntityTypeConfiguration<Produc
         builder.Property(p => p.SortOrder).HasComment("排序权重(升序)");
         builder.Property(p => p.IsPrimary).HasComment("是否为主图");
         builder.Property(p => p.CreatedOn).HasComment("创建时间");
+        builder.Property(p => p.CreatedBy).HasComment("创建人ID");
+        builder.Property(p => p.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(p => p.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
 
         // 产品ID索引，用于查询产品的所有图片
         builder.HasIndex(p => p.ProductId);

@@ -1,8 +1,10 @@
-﻿using AI.Boilerplate.Server.Api.Features.PushNotification;
+using AI.Boilerplate.Server.Api.Features.PushNotification;
+
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
 namespace AI.Boilerplate.Server.Api.Features.Identity.Models;
 
-public partial class UserSession
+public partial class UserSession : AuditEntity
 {
     public Guid Id { get; set; }
 

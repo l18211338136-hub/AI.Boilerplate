@@ -12,9 +12,12 @@ public class RagKnowledgeBaseConfiguration : IEntityTypeConfiguration<RagKnowled
         builder.Property(k => k.EmbeddingDimension).HasComment("嵌入维度");
         builder.Property(k => k.IsEnabled).HasComment("是否启用");
         builder.Property(k => k.CreatedOn).HasComment("创建时间");
-        builder.Property(k => k.UpdatedAt).HasComment("更新时间");
+        builder.Property(k => k.CreatedBy).HasComment("创建人ID");
+        builder.Property(k => k.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(k => k.ModifiedBy).HasComment("最后修改人ID");
         builder.Property(k => k.IsDeleted).HasComment("是否删除");
         builder.Property(k => k.DeletedOn).HasComment("删除时间");
+        builder.Property(k => k.DeletedBy).HasComment("删除人ID");
 
         builder.HasIndex(k => k.Code).IsUnique();
 

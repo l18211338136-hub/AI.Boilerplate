@@ -1,4 +1,4 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Metadata.Builders;
 
 namespace AI.Boilerplate.Server.Api.Features.Addresses;
@@ -19,7 +19,12 @@ public partial class AddressConfiguration : IEntityTypeConfiguration<Address>
         builder.Property(p => p.PostalCode).HasComment("邮政编码");
         builder.Property(p => p.IsDefault).HasComment("是否默认地址");
         builder.Property(p => p.CreatedOn).HasComment("创建时间");
-        builder.Property(p => p.UpdatedOn).HasComment("更新时间");
+        builder.Property(p => p.CreatedBy).HasComment("创建人ID");
+        builder.Property(p => p.ModifiedOn).HasComment("最后修改时间");
+        builder.Property(p => p.ModifiedBy).HasComment("最后修改人ID");
+        builder.Property(p => p.IsDeleted).HasComment("是否删除");
+        builder.Property(p => p.DeletedOn).HasComment("删除时间");
+        builder.Property(p => p.DeletedBy).HasComment("删除人ID");
 
         // 为每个用户配置默认地址的唯一性
         builder.HasIndex(p => new { p.UserId, p.IsDefault })

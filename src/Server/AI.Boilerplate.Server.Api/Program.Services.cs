@@ -1,4 +1,4 @@
-﻿﻿﻿﻿﻿using System.Net;
+﻿﻿using System.Net;
 using System.Net.Mail;
 using System.ClientModel.Primitives;
 using Npgsql;
@@ -33,6 +33,7 @@ using AI.Boilerplate.Server.Api.Infrastructure.Services;
 using AI.Boilerplate.Server.Api.Features.Products;
 using AI.Boilerplate.Server.Api.Features.Rag;
 using AI.Boilerplate.Server.Api.Infrastructure.Data.Seed;
+using AI.Boilerplate.Server.Api.Infrastructure.Services.Contracts;
 using AI.Boilerplate.Server.Api.Features.Categories;
 using AI.Boilerplate.Server.Api.Features.Chatbot;
 using AI.Boilerplate.Server.Api.Features.Identity;
@@ -58,6 +59,9 @@ public static partial class Program
 
         ServerApiSettings appSettings = new();
         configuration.Bind(appSettings);
+
+        services.AddHttpContextAccessor();
+        services.AddSingleton<ICurrentUserService, CurrentUserService>();
 
         services.AddScoped<IdentityEmailService>();
         services.AddScoped<EmailServiceJobsRunner>();

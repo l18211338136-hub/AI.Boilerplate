@@ -1,4 +1,4 @@
-namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
+﻿namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
 
 public class RagRecycleBinItemDto
 {
@@ -12,5 +12,5 @@ public class RagRecycleBinItemDto
 
     public string? Description { get; set; }
 
-    public DateTimeOffset DeletedOn { get; set; }
+    public DateTimeOffset? DeletedOn { get; set; }
 }

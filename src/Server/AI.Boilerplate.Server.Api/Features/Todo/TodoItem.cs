@@ -1,11 +1,11 @@
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
 
 namespace AI.Boilerplate.Server.Api.Features.Todo;
 
-public partial class TodoItem
+public partial class TodoItem : AuditEntity
 {
-    public new string Id { get; set; }
-    public new DateTimeOffset? UpdatedAt { get; set; }
+    public string Id { get; set; }
 
     [Required]
     public string? Title { get; set; }

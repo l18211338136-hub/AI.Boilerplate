@@ -1,9 +1,10 @@
-﻿using System.ComponentModel.DataAnnotations;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
 
 namespace AI.Boilerplate.Server.Api.Features.Products;
 
-public partial class ProductImage
+public partial class ProductImage : AuditEntity
 {
     [Key]
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
@@ -32,7 +33,4 @@ public partial class ProductImage
     [Comment("是否为主图")]
     public bool IsPrimary { get; set; }
 
-    [Required]
-    [Comment("创建时间")]
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
 }
