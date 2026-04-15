@@ -95,7 +95,7 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
 
     private async Task DeleteAttachment(Guid attachmentId, AttachmentKind[] kinds, CancellationToken cancellationToken)
     {
-        var attachments = await DbContext.Attachments.Where(p => p.Id == attachmentId && kinds.Contains(p.Kind)).ToArrayAsync(cancellationToken);
+        var attachments = await DbContext.Attachments.Where(p => p.Id == attachmentId && p.Kind != null && kinds.Contains(p.Kind.Value)).ToArrayAsync(cancellationToken);
 
         foreach (var attachment in attachments)
         {
@@ -114,7 +114,7 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
                     product.HasPrimaryImage = false;
                     product.PrimaryImageAltText = null;
                     await DbContext.SaveChangesAsync(cancellationToken);
-                    await responseCacheService.PurgeProductCache(product.ShortId);
+                    await responseCacheService.PurgeProductCache(product.ShortId ?? 0);
                 }
             }
 

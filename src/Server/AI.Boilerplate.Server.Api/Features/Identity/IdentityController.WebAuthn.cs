@@ -19,7 +19,7 @@ public partial class IdentityController
 
         if (request.UserIds is not null)
         {
-            var existingCredentials = await DbContext.WebAuthnCredential.Where(c => request.UserIds.Contains(c.UserId))
+            var existingCredentials = await DbContext.WebAuthnCredential.Where(c => c.UserId != null && request.UserIds.Contains(c.UserId.Value))
                                                                         .OrderByDescending(c => c.CreatedOn)
                                                                         .Select(c => new { c.Id, c.Transports })
                                                                         .ToArrayAsync(cancellationToken);
@@ -114,7 +114,7 @@ public partial class IdentityController
             AssertionResponse = clientResponse,
             OriginalOptions = options,
             StoredPublicKey = credential.PublicKey!,
-            StoredSignatureCounter = credential.SignCount,
+            StoredSignatureCounter = credential.SignCount ?? 0,
             IsUserHandleOwnerOfCredentialIdCallback = IsUserHandleOwnerOfCredentialId
         }, cancellationToken);
 

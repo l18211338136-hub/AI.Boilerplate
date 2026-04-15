@@ -14,46 +14,38 @@ public partial class Order : AuditEntity
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    [Required]
     [MaxLength(32)]
     [Comment("订单业务编号(唯一)")]
     public string? OrderNo { get; set; }
 
-    [Required]
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
-    [Required]
     [Precision(18, 3)]
     [Comment("商品原价总额")]
-    public decimal TotalAmount { get; set; }
+    public decimal? TotalAmount { get; set; }
 
-    [Required]
     [Precision(18, 3)]
     [Comment("优惠抵扣金额")]
-    public decimal DiscountAmount { get; set; }
+    public decimal? DiscountAmount { get; set; }
 
-    [Required]
     [Precision(18, 3)]
     [Comment("运费")]
-    public decimal ShippingFee { get; set; }
+    public decimal? ShippingFee { get; set; }
 
-    [Required]
     [Precision(18, 3)]
     [Comment("实际应付金额")]
-    public decimal PayableAmount { get; set; }
+    public decimal? PayableAmount { get; set; }
 
-    [Required]
     [Comment("订单状态(0:待付款 1:已付款 2:已发货 3:已完成 4:已取消 5:退款中)")]
-    public short Status { get; set; }
+    public short? Status { get; set; }
 
-    [Required]
     [ForeignKey(nameof(AddressId))]
     public Address? Address { get; set; }
 
-    public Guid AddressId { get; set; }
+    public Guid? AddressId { get; set; }
 
     [MaxLength(512)]
     [Comment("买家备注")]

@@ -11,20 +11,20 @@ namespace AI.Boilerplate.Server.Api.Features.Identity.Models;
 public class WebAuthnCredential : AuditEntity
 {
     public required byte[] Id { get; set; }
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
 
     public byte[]? PublicKey { get; set; }
 
-    public uint SignCount { get; set; }
+    public uint? SignCount { get; set; }
 
     public AuthenticatorTransport[]? Transports { get; set; }
 
-    public bool IsBackupEligible { get; set; }
+    public bool? IsBackupEligible { get; set; }
 
-    public bool IsBackedUp { get; set; }
+    public bool? IsBackedUp { get; set; }
 
     public byte[]? AttestationObject { get; set; }
 
@@ -34,6 +34,6 @@ public class WebAuthnCredential : AuditEntity
 
     public string? AttestationFormat { get; set; }
 
-    public Guid AaGuid { get; set; }
+    public Guid? AaGuid { get; set; }
 }
 

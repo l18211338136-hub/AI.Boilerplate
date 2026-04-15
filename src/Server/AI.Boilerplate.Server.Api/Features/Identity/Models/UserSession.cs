@@ -15,19 +15,19 @@ public partial class UserSession : AuditEntity
     /// <summary>
     /// <inheritdoc cref="AuthPolicies.PRIVILEGED_ACCESS"/>
     /// </summary>
-    public bool Privileged { get; set; }
+    public bool? Privileged { get; set; }
 
     /// <summary>
     /// Unix Time Seconds
     /// </summary>
-    public long StartedOn { get; set; }
+    public long? StartedOn { get; set; }
 
     /// <summary>
     /// Unix Time Seconds
     /// </summary>
     public long? RenewedOn { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
@@ -36,7 +36,7 @@ public partial class UserSession : AuditEntity
 
     public string? SignalRConnectionId { get; set; }
 
-    public UserSessionNotificationStatus NotificationStatus { get; set; }
+    public UserSessionNotificationStatus? NotificationStatus { get; set; }
 
     public string? DeviceInfo { get; set; }
 

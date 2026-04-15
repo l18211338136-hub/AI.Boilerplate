@@ -90,7 +90,7 @@ public partial class AppDbContext(DbContextOptions<AppDbContext> options, ICurre
         {
             if (typeof(ISoftDelete).IsAssignableFrom(entityType.ClrType))
             {
-                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(ConvertFilterExpression<ISoftDelete>(e => !e.IsDeleted, entityType.ClrType));
+                modelBuilder.Entity(entityType.ClrType).HasQueryFilter(ConvertFilterExpression<ISoftDelete>(e => e.IsDeleted != true, entityType.ClrType));
             }
         }
     }

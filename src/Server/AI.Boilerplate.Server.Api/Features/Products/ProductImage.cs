@@ -10,13 +10,11 @@ public partial class ProductImage : AuditEntity
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    [Required]
     [ForeignKey(nameof(ProductId))]
     public Product? Product { get; set; }
 
-    public Guid ProductId { get; set; }
+    public Guid? ProductId { get; set; }
 
-    [Required]
     [MaxLength(512)]
     [Comment("图片存储URL")]
     public string? ImageUrl { get; set; }
@@ -25,12 +23,10 @@ public partial class ProductImage : AuditEntity
     [Comment("图片替代文本")]
     public string? AltText { get; set; }
 
-    [Required]
     [Comment("排序权重(升序)")]
-    public int SortOrder { get; set; }
+    public int? SortOrder { get; set; }
 
-    [Required]
     [Comment("是否为主图")]
-    public bool IsPrimary { get; set; }
+    public bool? IsPrimary { get; set; }
 
 }

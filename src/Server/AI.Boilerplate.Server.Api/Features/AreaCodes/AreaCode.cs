@@ -12,12 +12,12 @@ public class AreaCode : AuditEntity
     /// <summary>
     /// 名称
     /// </summary>
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
     /// <summary>
     /// 级别1-5,省市县镇村
     /// </summary>
-    public short Level { get; set; }
+    public short? Level { get; set; }
 
     /// <summary>
     /// 父级区划代码
@@ -27,5 +27,5 @@ public class AreaCode : AuditEntity
     /// <summary>
     /// 城乡分类
     /// </summary>
-    public int Category { get; set; }
+    public int? Category { get; set; }
 }

@@ -12,24 +12,20 @@ public partial class Payment : AuditEntity
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    [Required]
     [ForeignKey(nameof(OrderId))]
     public Order? Order { get; set; }
 
-    public Guid OrderId { get; set; }
+    public Guid? OrderId { get; set; }
 
-    [Required]
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
-    [Required]
     [Precision(18, 3)]
     [Comment("实际支付金额")]
-    public decimal Amount { get; set; }
+    public decimal? Amount { get; set; }
 
-    [Required]
     [MaxLength(32)]
     [Comment("支付渠道(Alipay, WeChatPay, UnionPay等)")]
     public string? PaymentMethod { get; set; }
@@ -38,9 +34,8 @@ public partial class Payment : AuditEntity
     [Comment("第三方支付平台流水号")]
     public string? TransactionId { get; set; }
 
-    [Required]
     [Comment("支付状态(0:待支付 1:成功 2:失败 3:已退款)")]
-    public short Status { get; set; }
+    public short? Status { get; set; }
 
     [Comment("支付成功时间")]
     public DateTimeOffset? PaidOn { get; set; }

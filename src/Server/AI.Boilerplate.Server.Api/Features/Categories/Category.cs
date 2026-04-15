@@ -1,4 +1,4 @@
-using AI.Boilerplate.Server.Api.Features.Products;
+﻿using AI.Boilerplate.Server.Api.Features.Products;
 
 using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
@@ -8,7 +8,7 @@ public partial class Category : AuditEntity
 {
     public Guid Id { get; set; }
 
-    [Required, MaxLength(64)]
+    [MaxLength(64)]
     public string? Name { get; set; }
 
     public string? Color { get; set; }

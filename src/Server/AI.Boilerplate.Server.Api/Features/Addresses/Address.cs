@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
+using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
 using StackExchange.Redis;
 
@@ -10,38 +10,31 @@ public partial class Address : AuditEntity
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    [Required]
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
-    [Required]
     [MaxLength(64)]
     [Comment("收件人姓名")]
     public string? RecipientName { get; set; }
 
-    [Required]
     [MaxLength(20)]
     [Comment("联系电话")]
     public string? PhoneNumber { get; set; }
 
-    [Required]
     [MaxLength(32)]
     [Comment("省")]
     public string? Province { get; set; }
 
-    [Required]
     [MaxLength(32)]
     [Comment("市")]
     public string? City { get; set; }
 
-    [Required]
     [MaxLength(32)]
     [Comment("区/县")]
     public string? District { get; set; }
 
-    [Required]
     [MaxLength(256)]
     [Comment("详细地址")]
     public string? StreetAddress { get; set; }
@@ -50,9 +43,8 @@ public partial class Address : AuditEntity
     [Comment("邮政编码")]
     public string? PostalCode { get; set; }
 
-    [Required]
     [Comment("是否默认地址")]
-    public bool IsDefault { get; set; }
+    public bool? IsDefault { get; set; }
 
     // 导航属性
     public IList<Order> Orders { get; set; } = [];

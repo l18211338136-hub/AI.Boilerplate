@@ -22,11 +22,10 @@ public class CustomMigrationsSqlGenerator : NpgsqlMigrationsSqlGenerator
     {
         // 移除外键约束
         operation.ForeignKeys.Clear();
-
         base.Generate(operation, model, builder, terminate);
     }
 
-    // 如果需要拦截添加外键的操作
+    // 拦截添加外键的操作
     protected override void Generate(
         AddForeignKeyOperation operation,
         IModel? model,
@@ -34,6 +33,17 @@ public class CustomMigrationsSqlGenerator : NpgsqlMigrationsSqlGenerator
         bool terminate = true)
     {
         // 跳过外键添加
+        return;
+    }
+
+    // 【新增】拦截删除外键的操作
+    protected override void Generate(
+        DropForeignKeyOperation operation,
+        IModel? model,
+        MigrationCommandListBuilder builder,
+        bool terminate = true)
+    {
+        // 跳过外键删除，因为它可能根本不存在
         return;
     }
 }

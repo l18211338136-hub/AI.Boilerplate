@@ -1,4 +1,4 @@
-using AI.Boilerplate.Server.Api.Features.Categories;
+﻿using AI.Boilerplate.Server.Api.Features.Categories;
 
 using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
@@ -12,13 +12,13 @@ public partial class Product : AuditEntity
     /// The product's ShortId is used to create a more human-friendly URL.
     /// </summary>
     [Range(0, int.MaxValue)]
-    public int ShortId { get; set; }
+    public int? ShortId { get; set; }
 
-    [Required, MaxLength(64)]
+    [MaxLength(64)]
     public string? Name { get; set; }
 
     [Range(0, double.MaxValue)]
-    public decimal Price { get; set; }
+    public decimal? Price { get; set; }
 
     [MaxLength(4096)]
     public string? DescriptionHTML { get; set; }
@@ -29,11 +29,11 @@ public partial class Product : AuditEntity
     [ForeignKey(nameof(CategoryId))]
     public Category? Category { get; set; }
 
-    public Guid CategoryId { get; set; }
+    public Guid? CategoryId { get; set; }
 
     public long Version { get; set; }
 
-    public bool HasPrimaryImage { get; set; } = false;
+    public bool? HasPrimaryImage { get; set; }
 
     public string? PrimaryImageAltText { get; set; }
 

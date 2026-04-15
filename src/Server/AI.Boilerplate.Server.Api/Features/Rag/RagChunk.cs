@@ -7,14 +7,13 @@ public class RagChunk : AuditEntity
 {
     public Guid Id { get; set; }
 
-    public Guid DocumentId { get; set; }
+    public Guid? DocumentId { get; set; }
 
-    public int ChunkIndex { get; set; }
+    public int? ChunkIndex { get; set; }
 
-    [Required]
-    public string Content { get; set; } = string.Empty;
+    public string? Content { get; set; }
 
-    public int TokenCount { get; set; }
+    public int? TokenCount { get; set; }
 
     public Vector? Embedding { get; set; }
 

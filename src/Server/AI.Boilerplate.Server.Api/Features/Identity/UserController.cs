@@ -503,7 +503,7 @@ public partial class UserController : AppControllerBase, IUserController
             }
         }
 
-        return userSession.NotificationStatus;
+        return userSession.NotificationStatus ?? UserSessionNotificationStatus.NotConfigured;
     }
 
     private static string FormatKey(string unformattedKey)

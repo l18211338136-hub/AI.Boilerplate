@@ -12,24 +12,20 @@ public partial class CartItem : AuditEntity
     [DatabaseGenerated(DatabaseGeneratedOption.Identity)]
     public Guid Id { get; set; }
 
-    [Required]
     [ForeignKey(nameof(UserId))]
     public User? User { get; set; }
 
-    public Guid UserId { get; set; }
+    public Guid? UserId { get; set; }
 
-    [Required]
     [ForeignKey(nameof(ProductId))]
     public Product? Product { get; set; }
 
-    public Guid ProductId { get; set; }
+    public Guid? ProductId { get; set; }
 
-    [Required]
     [Comment("数量")]
-    public int Quantity { get; set; }
+    public int? Quantity { get; set; }
 
-    [Required]
     [Comment("结算是否勾选")]
-    public bool Selected { get; set; }
+    public bool? Selected { get; set; }
 
 }

@@ -1,4 +1,4 @@
-namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
+﻿namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
 
 public class RagRetrievalDebugResultDto
 {
@@ -17,9 +17,9 @@ public class RagRetrievalHitDto
 {
     public Guid ChunkId { get; set; }
 
-    public Guid DocumentId { get; set; }
+    public Guid? DocumentId { get; set; }
 
-    public int ChunkIndex { get; set; }
+    public int? ChunkIndex { get; set; }
 
     public double Score { get; set; }
 

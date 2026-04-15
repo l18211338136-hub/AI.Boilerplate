@@ -16,13 +16,13 @@ public class RagKnowledgeBaseDto
     [MaxLength(128)]
     public string? EmbeddingModel { get; set; }
 
-    public int EmbeddingDimension { get; set; }
+    public int? EmbeddingDimension { get; set; }
 
-    public bool IsEnabled { get; set; }
+    public bool? IsEnabled { get; set; }
 
-    public int DocumentCount { get; set; }
+    public int? DocumentCount { get; set; }
 
-    public int ChunkCount { get; set; }
+    public int? ChunkCount { get; set; }
 
     public DateTimeOffset? ModifiedOn { get; set; }
 }

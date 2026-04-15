@@ -6,21 +6,18 @@ public class RagKnowledgeBase : AuditEntity
 {
     public Guid Id { get; set; }
 
-    [Required]
     [MaxLength(64)]
-    public string Code { get; set; } = string.Empty;
+    public string? Code { get; set; }
 
-    [Required]
     [MaxLength(128)]
-    public string Name { get; set; } = string.Empty;
+    public string? Name { get; set; }
 
-    [Required]
     [MaxLength(128)]
-    public string EmbeddingModel { get; set; } = string.Empty;
+    public string? EmbeddingModel { get; set; }
 
-    public int EmbeddingDimension { get; set; } = 768;
+    public int? EmbeddingDimension { get; set; }
 
-    public bool IsEnabled { get; set; } = true;
+    public bool? IsEnabled { get; set; }
 
     public List<RagDocument> Documents { get; set; } = [];
 }

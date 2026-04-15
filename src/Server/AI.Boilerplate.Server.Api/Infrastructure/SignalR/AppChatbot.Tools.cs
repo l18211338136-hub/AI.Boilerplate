@@ -392,7 +392,7 @@ public partial class AppChatbot
             {
                 "all" => query,
                 "in_progress" => query.Where(t => t.IsDone == false),
-                "completed" => query.Where(t => t.IsDone),
+                "completed" => query.Where(t => t.IsDone == true),
                 _ => throw new ValidationException("Invalid status. Use all, in_progress, or completed.")
             };
 

@@ -6,21 +6,18 @@ public class RagDocument : AuditEntity
 {
     public Guid Id { get; set; }
 
-    public Guid KnowledgeBaseId { get; set; }
+    public Guid? KnowledgeBaseId { get; set; }
 
-    [Required]
     [MaxLength(32)]
-    public string SourceType { get; set; } = string.Empty;
+    public string? SourceType { get; set; }
 
-    [Required]
     [MaxLength(512)]
-    public string SourceId { get; set; } = string.Empty;
+    public string? SourceId { get; set; }
 
-    [Required]
     [MaxLength(256)]
-    public string Title { get; set; } = string.Empty;
+    public string? Title { get; set; }
 
-    public DateTimeOffset LastIndexedAt { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? LastIndexedAt { get; set; }
 
     public RagKnowledgeBase? KnowledgeBase { get; set; }
 

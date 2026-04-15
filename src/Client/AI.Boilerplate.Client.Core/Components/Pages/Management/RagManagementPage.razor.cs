@@ -1,4 +1,4 @@
-using AI.Boilerplate.Shared.Features.Rag;
+﻿using AI.Boilerplate.Shared.Features.Rag;
 using AI.Boilerplate.Shared.Features.Rag.Dtos;
 
 namespace AI.Boilerplate.Client.Core.Components.Pages.Management;
@@ -691,9 +691,9 @@ public partial class RagManagementPage
         {
             isLoadingChunkingOptions = true;
             var options = await ragManagementController.GetChunkingOptions(CurrentCancellationToken);
-            chunkMaxChunkLength = options.MaxChunkLength;
-            chunkPreferParagraphFirst = options.PreferParagraphFirst;
-            chunkMinChunkCount = options.MinChunkCount;
+            chunkMaxChunkLength = options.MaxChunkLength ?? 0;
+            chunkPreferParagraphFirst = options.PreferParagraphFirst ?? true;
+            chunkMinChunkCount = options.MinChunkCount ?? 0;
         }
         finally
         {
@@ -716,9 +716,9 @@ public partial class RagManagementPage
                 MinChunkCount = chunkMinChunkCount
             }, CurrentCancellationToken);
 
-            chunkMaxChunkLength = updated.MaxChunkLength;
-            chunkPreferParagraphFirst = updated.PreferParagraphFirst;
-            chunkMinChunkCount = updated.MinChunkCount;
+            chunkMaxChunkLength = updated.MaxChunkLength ?? 0;
+            chunkPreferParagraphFirst = updated.PreferParagraphFirst ?? true;
+            chunkMinChunkCount = updated.MinChunkCount ?? 0;
             isChunkingPanelOpen = false;
         }
         finally

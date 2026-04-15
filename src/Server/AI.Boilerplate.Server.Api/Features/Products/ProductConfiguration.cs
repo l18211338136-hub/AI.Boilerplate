@@ -1,4 +1,4 @@
-namespace AI.Boilerplate.Server.Api.Features.Products;
+﻿namespace AI.Boilerplate.Server.Api.Features.Products;
 
 public partial class ProductConfiguration : IEntityTypeConfiguration<Product>
 {

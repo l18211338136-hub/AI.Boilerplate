@@ -47,14 +47,14 @@ public partial class User : IdentityUser<Guid>, IAuditableEntity, ISoftDelete
     public List<UserLogin> Logins { get; set; } = [];
     public List<UserToken> Tokens { get; set; } = [];
 
-    public bool HasProfilePicture { get; set; }
+    public bool? HasProfilePicture { get; set; }
 
-    public DateTimeOffset CreatedOn { get; set; } = DateTimeOffset.UtcNow;
+    public DateTimeOffset? CreatedOn { get; set; }
     public Guid? CreatedBy { get; set; }
     public DateTimeOffset? ModifiedOn { get; set; }
     public Guid? ModifiedBy { get; set; }
 
-    public bool IsDeleted { get; set; }
+    public bool? IsDeleted { get; set; }
     public DateTimeOffset? DeletedOn { get; set; }
     public Guid? DeletedBy { get; set; }
 }

@@ -1,10 +1,10 @@
-namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
+﻿namespace AI.Boilerplate.Shared.Features.Rag.Dtos;
 
 public class RagDocumentDto
 {
     public Guid Id { get; set; }
 
-    public Guid KnowledgeBaseId { get; set; }
+    public Guid? KnowledgeBaseId { get; set; }
 
     [Required]
     [MaxLength(32)]
@@ -24,5 +24,5 @@ public class RagDocumentDto
 
     public string? Content { get; set; }
 
-    public DateTimeOffset LastIndexedAt { get; set; }
+    public DateTimeOffset? LastIndexedAt { get; set; }
 }

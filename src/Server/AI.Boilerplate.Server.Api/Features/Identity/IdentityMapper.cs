@@ -1,4 +1,4 @@
-﻿using Riok.Mapperly.Abstractions;
+using Riok.Mapperly.Abstractions;
 using AI.Boilerplate.Shared.Features.Identity.Dtos;
 using AI.Boilerplate.Server.Api.Features.Identity.Models;
 
@@ -31,7 +31,7 @@ public static partial class IdentityMapper
     public static partial IQueryable<UserSessionDto> Project(this IQueryable<UserSession> source);
 
     [UserMapping]
-    private static long MapRenewedOn(UserSession us) => us.RenewedOn ?? us.StartedOn;
+    private static long MapRenewedOn(UserSession us) => us.RenewedOn ?? us.StartedOn ?? 0;
 
 
 

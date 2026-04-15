@@ -152,14 +152,14 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId && k.IsDeleted, cancellationToken)
+        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         entity.IsDeleted = false;
         entity.DeletedOn = null;
         entity.ModifiedOn = DateTimeOffset.UtcNow;
 
-        var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId && d.IsDeleted).ToListAsync(cancellationToken);
+        var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId).ToListAsync(cancellationToken);
         foreach (var doc in documents)
         {
             doc.IsDeleted = false;
@@ -174,7 +174,7 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId && k.IsDeleted, cancellationToken)
+        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         dbContext.RagKnowledgeBases.Remove(entity);
@@ -365,7 +365,7 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var document = await dbContext.RagDocuments.Include(d => d.KnowledgeBase).FirstOrDefaultAsync(d => d.Id == documentId && d.IsDeleted, cancellationToken)
+        var document = await dbContext.RagDocuments.Include(d => d.KnowledgeBase).FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
         if (document.KnowledgeBase?.IsDeleted is true)
             throw new BadRequestException();
@@ -381,7 +381,7 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var document = await dbContext.RagDocuments.FirstOrDefaultAsync(d => d.Id == documentId && d.IsDeleted, cancellationToken)
+        var document = await dbContext.RagDocuments.FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         dbContext.RagDocuments.Remove(document);
@@ -394,7 +394,7 @@ public class RagManagementStore
 
         var deletedKnowledgeBases = await dbContext.RagKnowledgeBases
             .AsNoTracking()
-            .Where(k => k.IsDeleted)
+            .Where(k => k.IsDeleted == true)
             .Select(k => new RagRecycleBinItemDto
             {
                 ItemType = "knowledge-base",
@@ -408,7 +408,7 @@ public class RagManagementStore
 
         var deletedDocuments = await dbContext.RagDocuments
             .AsNoTracking()
-            .Where(d => d.IsDeleted)
+            .Where(d => d.IsDeleted == true)
             .Select(d => new RagRecycleBinItemDto
             {
                 ItemType = "document",
@@ -543,9 +543,9 @@ public class RagManagementStore
             await dbContext.RagChunkingSettings.AddAsync(setting, cancellationToken);
         }
 
-        setting.MaxChunkLength = Math.Clamp(dto.MaxChunkLength, 100, 4000);
+        setting.MaxChunkLength = Math.Clamp(dto.MaxChunkLength ?? 0, 100, 4000);
         setting.PreferParagraphFirst = dto.PreferParagraphFirst;
-        setting.MinChunkCount = Math.Clamp(dto.MinChunkCount, 1, 20);
+        setting.MinChunkCount = Math.Clamp(dto.MinChunkCount ?? 0, 1, 20);
         setting.ModifiedOn = DateTimeOffset.UtcNow;
 
         await dbContext.SaveChangesAsync(cancellationToken);
@@ -803,10 +803,10 @@ ORDER BY
         if (string.IsNullOrWhiteSpace(normalized))
             return CreateDefaultChunkTexts(sourceId);
 
-        var maxChunkLength = Math.Clamp(chunking.MaxChunkLength, 100, 4000);
-        var minChunkCount = Math.Clamp(chunking.MinChunkCount, 1, 20);
+        var maxChunkLength = Math.Clamp(chunking.MaxChunkLength ?? 0, 100, 4000);
+        var minChunkCount = Math.Clamp(chunking.MinChunkCount ?? 0, 1, 20);
 
-        var units = chunking.PreferParagraphFirst
+        var units = chunking.PreferParagraphFirst ?? true
             ? normalized.Split("\n\n", StringSplitOptions.RemoveEmptyEntries)
             : normalized.Split('\n', StringSplitOptions.RemoveEmptyEntries);
 
@@ -968,7 +968,7 @@ ORDER BY
                        .Where(t => t.Length > 1)];
     }
 
-    private static double ComputeKeywordScore(string content, HashSet<string> queryKeywords)
+    private static double ComputeKeywordScore(string? content, HashSet<string> queryKeywords)
     {
         if (queryKeywords.Count == 0 || string.IsNullOrWhiteSpace(content))
             return 0;
