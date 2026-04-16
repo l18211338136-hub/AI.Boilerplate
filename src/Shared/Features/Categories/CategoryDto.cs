@@ -1,4 +1,4 @@
-﻿namespace AI.Boilerplate.Shared.Features.Categories;
+namespace AI.Boilerplate.Shared.Features.Categories;
 
 [DtoResourceType(typeof(AppStrings))]
 public partial class CategoryDto
@@ -12,6 +12,10 @@ public partial class CategoryDto
 
     [Display(Name = nameof(AppStrings.Color))]
     public string? Color { get; set; } = "#FFFFFF";
+    
+    public Guid? ParentId { get; set; }
+
+    public List<CategoryDto> Children { get; set; } = [];
 
     public int ProductsCount { get; set; }
 

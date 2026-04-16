@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Server.Api.Features.Products;
+using AI.Boilerplate.Server.Api.Features.Products;
 
 using AI.Boilerplate.Server.Api.Infrastructure.Data.Audit;
 
@@ -12,6 +12,9 @@ public partial class Category : AuditEntity
     public string? Name { get; set; }
 
     public string? Color { get; set; }
+    
+    public Guid? ParentId { get; set; }
+    public Category? Parent { get; set; }
 
     public long Version { get; set; }
 

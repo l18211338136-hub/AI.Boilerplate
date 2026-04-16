@@ -1,4 +1,4 @@
-﻿using AI.Boilerplate.Shared.Features.Products;
+using AI.Boilerplate.Shared.Features.Products;
 using AI.Boilerplate.Shared.Features.Categories;
 using AI.Boilerplate.Shared.Features.Attachments;
 
@@ -30,12 +30,9 @@ public partial class AddOrEditProductPage
         {
             var categoryList = await categoryController.Get(CurrentCancellationToken);
 
-            allCategoryList = [.. categoryList.Select(c => new BitDropdownItem<string>()
-                                                           {
-                                                               ItemType = BitDropdownItemType.Normal,
-                                                               Text = c.Name ?? string.Empty,
-                                                               Value = c.Id.ToString()
-                                                           })];
+            allCategoryList = [];
+            
+            BuildTree(categoryList, null, 0);
 
             if (Id is null) return;
 
@@ -138,5 +135,19 @@ public partial class AddOrEditProductPage
         var accessToken = await AuthManager.GetFreshAccessToken(requestedBy: nameof(BitFileUpload));
 
         return new() { { "Authorization", $"Bearer {accessToken}" } };
+    }
+
+    private void BuildTree(List<CategoryDto> all, Guid? parentId, int level)
+    {
+        var children = all.Where(c => c.ParentId == parentId).OrderBy(c => c.Name);
+        foreach (var child in children)
+        {
+            allCategoryList.Add(new BitDropdownItem<string>
+            {
+                Text = new string('\u00A0', level * 4) + child.Name, // Using non-breaking space for better rendering in HTML
+                Value = child.Id.ToString()
+            });
+            BuildTree(all, child.Id, level + 1);
+        }
     }
 }

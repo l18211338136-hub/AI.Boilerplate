@@ -1423,4 +1423,8 @@
   <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
     <value>读取文件时出错。</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>父级分类</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>选择父级分类</value></data>
+  <data name="None" xml:space="preserve"><value>无</value></data>
 </root>

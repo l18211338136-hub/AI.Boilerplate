@@ -1427,4 +1427,8 @@ After reaching {0}, extra sign-ins will have reduced functions.</value>
   <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
     <value>Error reading file.</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>Parent category</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>Select parent category</value></data>
+  <data name="None" xml:space="preserve"><value>None</value></data>
 </root>

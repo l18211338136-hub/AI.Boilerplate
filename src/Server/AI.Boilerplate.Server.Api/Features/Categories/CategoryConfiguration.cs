@@ -18,7 +18,14 @@ public partial class CategoryConfiguration : IEntityTypeConfiguration<Category>
         builder.Property(p => p.DeletedOn).HasComment("删除时间");
         builder.Property(p => p.DeletedBy).HasComment("删除人ID");
 
+        builder.Property(p => p.ParentId).HasComment("父级类别ID");
+        
         builder.HasIndex(p => p.Name).IsUnique();
+
+        builder.HasOne(c => c.Parent)
+               .WithMany()
+               .HasForeignKey(c => c.ParentId)
+               .OnDelete(DeleteBehavior.Restrict);
     }
 }
 

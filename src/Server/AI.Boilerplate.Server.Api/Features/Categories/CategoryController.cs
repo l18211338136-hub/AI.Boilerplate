@@ -1,4 +1,4 @@
-﻿using Microsoft.AspNetCore.SignalR;
+using Microsoft.AspNetCore.SignalR;
 using AI.Boilerplate.Server.Api.Infrastructure.SignalR;
 using AI.Boilerplate.Shared.Features.Categories;
 
@@ -79,7 +79,8 @@ public partial class CategoryController : AppControllerBase, ICategoryController
     [HttpDelete("{id}/{version}")]
     public async Task Delete(Guid id, long version, CancellationToken cancellationToken)
     {
-        if (await DbContext.Products.AnyAsync(p => p.CategoryId == id, cancellationToken))
+        if (await DbContext.Products.AnyAsync(p => p.CategoryId == id, cancellationToken) ||
+            await DbContext.Categories.AnyAsync(c => c.ParentId == id, cancellationToken))
         {
             throw new BadRequestException(Localizer[nameof(AppStrings.CategoryNotEmpty)]);
         }
@@ -105,6 +106,23 @@ public partial class CategoryController : AppControllerBase, ICategoryController
         if ((entry.State is EntityState.Added || entry.Property(c => c.Name).IsModified)
             && await DbContext.Categories.AnyAsync(p => p.Name == category.Name, cancellationToken))
             throw new ResourceValidationException((nameof(CategoryDto.Name), [Localizer[nameof(AppStrings.DuplicateCategoryName), category.Name!]]));
+
+        if (entry.State is EntityState.Modified && entry.Property(c => c.ParentId).IsModified && category.ParentId is not null)
+        {
+            var currentParentId = category.ParentId;
+            while (currentParentId is not null)
+            {
+                if (currentParentId == category.Id)
+                {
+                    throw new BadRequestException(Localizer[nameof(AppStrings.UnknownException)]); // Or a more specific message if available
+                }
+
+                currentParentId = await DbContext.Categories
+                    .Where(c => c.Id == currentParentId)
+                    .Select(c => c.ParentId)
+                    .FirstOrDefaultAsync(cancellationToken);
+            }
+        }
     }
 }
 

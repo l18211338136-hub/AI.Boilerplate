@@ -1421,4 +1421,8 @@
   <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
     <value>خطأ في قراءة الملف.</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>الفئة الأم</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>اختر الفئة الأم</value></data>
+  <data name="None" xml:space="preserve"><value>لا يوجد</value></data>
 </root>

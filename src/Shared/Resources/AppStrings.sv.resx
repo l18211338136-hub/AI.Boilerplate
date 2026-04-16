@@ -1421,4 +1421,8 @@ Efter att ha nått {0} kommer extra inloggningar att ha reducerade funktioner.</
   <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
     <value>Fel vid läsning av fil.</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>Överkategori</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>Välj överkategori</value></data>
+  <data name="None" xml:space="preserve"><value>Ingen</value></data>
 </root>

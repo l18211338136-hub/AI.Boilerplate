@@ -32,7 +32,7 @@
                                  Items="allCategoryList"
                                  Label="@Localizer[(nameof(AppStrings.Category))]"
                                  Placeholder="@Localizer[(nameof(AppStrings.SelectCategory))]"
-                                 OnSelectItem="((BitDropdownItem<string> item) => { product.CategoryId = Guid.Parse(item.Value!); product.CategoryName = item.Text; })" />
+                                 OnSelectItem="((BitDropdownItem<string> item) => { product.CategoryId = string.IsNullOrEmpty(item.Value) ? null : Guid.Parse(item.Value); product.CategoryName = item.Text; })" />
                     <ValidationMessage For="@(() => product.CategoryId)" />
 
                     <BitNumberField @bind-Value="product.Price"

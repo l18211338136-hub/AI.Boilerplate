@@ -1421,4 +1421,8 @@
   <data name="SearchOnDescription" xml:space="preserve">
     <value>جستجو بر اساس توضیحات</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>دسته بندی والد</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>انتخاب دسته بندی والد</value></data>
+  <data name="None" xml:space="preserve"><value>هیچ کدام</value></data>
 </root>

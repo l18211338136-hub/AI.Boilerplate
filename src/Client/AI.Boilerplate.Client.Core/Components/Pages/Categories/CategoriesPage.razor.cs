@@ -1,6 +1,12 @@
-﻿using AI.Boilerplate.Shared.Features.Categories;
+using AI.Boilerplate.Shared.Features.Categories;
 
 namespace AI.Boilerplate.Client.Core.Components.Pages.Categories;
+
+public class CategoryDisplayItem
+{
+    public CategoryDto Category { get; set; } = default!;
+    public int Level { get; set; }
+}
 
 public partial class CategoriesPage
 {
@@ -10,8 +16,8 @@ public partial class CategoriesPage
     private AddOrEditCategoryModal? modal;
     private string categoryNameFilter = string.Empty;
 
-    private BitDataGrid<CategoryDto>? dataGrid;
-    private BitDataGridItemsProvider<CategoryDto> categoriesProvider = default!;
+    private BitDataGrid<CategoryDisplayItem>? dataGrid;
+    private BitDataGridItemsProvider<CategoryDisplayItem> categoriesProvider = default!;
     private BitDataGridPaginationState pagination = new() { ItemsPerPage = 10 };
 
 
@@ -37,6 +43,8 @@ public partial class CategoriesPage
     }
 
 
+    private List<CategoryDisplayItem> flattenedCategories = [];
+
     private void PrepareGridDataProvider()
     {
         categoriesProvider = async req =>
@@ -46,27 +54,27 @@ public partial class CategoriesPage
 
             try
             {
-                var query = new ODataQuery
-                {
-                    Top = req.Count ?? 10,
-                    Skip = req.StartIndex,
-                    OrderBy = string.Join(", ", req.GetSortByProperties().Select(p => $"{p.PropertyName} {(p.Direction == BitDataGridSortDirection.Ascending ? "asc" : "desc")}"))
-                };
+                var allCategories = await categoryController.Get(req.CancellationToken);
+                
+                flattenedCategories.Clear();
+                BuildFlattenedTree(allCategories, null, 0);
+
+                var query = flattenedCategories.AsQueryable();
 
                 if (string.IsNullOrEmpty(CategoryNameFilter) is false)
                 {
-                    query.Filter = $"contains(tolower({nameof(CategoryDto.Name)}),'{CategoryNameFilter.ToLower()}')";
+                    query = query.Where(i => i.Category.Name!.Contains(CategoryNameFilter, StringComparison.OrdinalIgnoreCase));
                 }
-                
-                var data = await categoryController.WithQuery(query.ToString())
-                                                   .GetCategories(req.CancellationToken);
-                
-                return BitDataGridItemsProviderResult.From(data!.Items!, (int)data!.TotalCount);
+
+                var totalCount = query.Count();
+                var items = query.Skip(req.StartIndex).Take(req.Count ?? 10).ToArray();
+
+                return BitDataGridItemsProviderResult.From(items, totalCount);
             }
             catch (Exception exp)
             {
                 ExceptionHandler.Handle(exp);
-                return BitDataGridItemsProviderResult.From(new List<CategoryDto> { }, 0);
+                return BitDataGridItemsProviderResult.From(new List<CategoryDisplayItem> { }, 0);
             }
             finally
             {
@@ -74,6 +82,20 @@ public partial class CategoriesPage
                 StateHasChanged();
             }
         };
+    }
+
+    private void BuildFlattenedTree(List<CategoryDto> all, Guid? parentId, int level)
+    {
+        var children = all.Where(c => c.ParentId == parentId).OrderBy(c => c.Name);
+        foreach (var child in children)
+        {
+            flattenedCategories.Add(new CategoryDisplayItem
+            {
+                Category = child,
+                Level = level
+            });
+            BuildFlattenedTree(all, child.Id, level + 1);
+        }
     }
 
     private async Task RefreshData()
@@ -103,7 +125,7 @@ public partial class CategoriesPage
         }
         catch (KnownException exp)
         {
-            SnackBarService.Error(exp.Message);
+            ExceptionHandler.Handle(exp);
         }
         finally
         {

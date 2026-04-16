@@ -1421,4 +1421,8 @@
   <data name="SearchOnDescription" xml:space="preserve">
     <value>विवरण पर खोजें</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>मल शरण</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>मल शरण चन</value></data>
+  <data name="None" xml:space="preserve"><value>कई नह</value></data>
 </root>

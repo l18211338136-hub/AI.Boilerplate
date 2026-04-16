@@ -37,6 +37,13 @@
                                       Label="@Localizer[nameof(AppStrings.Name)]"
                                       Placeholder="@Localizer[nameof(AppStrings.EnterCategoryName)]" />
                         <ValidationMessage For="() => category.Name" />
+                        
+                        <BitDropdown @bind-Value="category.ParentId"
+                                     Label="@Localizer[nameof(AppStrings.ParentCategory)]"
+                                     Placeholder="@Localizer[nameof(AppStrings.SelectParentCategory)]"
+                                     Items="parentCategories"
+                                     Responsive />
+                        <ValidationMessage For="() => category.ParentId" />
                         <br />
                         <BitLabel For="catColorInput">@Localizer[nameof(AppStrings.Color)]</BitLabel>
 

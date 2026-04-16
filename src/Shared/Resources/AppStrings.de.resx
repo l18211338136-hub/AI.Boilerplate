@@ -1421,4 +1421,8 @@ Nach Erreichen von {0} haben zusätzliche Anmeldungen reduzierte Funktionen.</va
   <data name="AppAiChatPanelErrorReadingFile" xml:space="preserve">
     <value>Fehler beim Lesen der Datei.</value>
   </data>
+
+  <data name="ParentCategory" xml:space="preserve"><value>Übergeordnete Kategorie</value></data>
+  <data name="SelectParentCategory" xml:space="preserve"><value>Übergeordnete Kategorie auswählen</value></data>
+  <data name="None" xml:space="preserve"><value>Keine</value></data>
 </root>
