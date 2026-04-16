@@ -104,6 +104,12 @@
         </EmbeddedResource>
     </ItemGroup>
 
+    <ItemGroup>
+      <None Update="data\AreaCodes.sql">
+        <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+      </None>
+    </ItemGroup>
+
     <!--
     https://learn.microsoft.com/en-us/dotnet/core/docker/publish-as-container
     https://learn.microsoft.com/en-us/visualstudio/containers/container-msbuild-properties
