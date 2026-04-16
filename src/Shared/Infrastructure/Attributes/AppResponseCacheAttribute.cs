@@ -1,4 +1,4 @@
-﻿namespace AI.Boilerplate.Shared.Infrastructure.Attributes;
+namespace AI.Boilerplate.Shared.Infrastructure.Attributes;
 
 /// <summary>
 /// Applying this attribute to Blazor pages or API actions will cache them in ASP.NET Core's output cache,
@@ -12,13 +12,13 @@ public class AppResponseCacheAttribute : Attribute
     /// Specifies the cache duration in seconds. This setting caches the response in ASP.NET Core's output cache,
     /// CDN edge servers, the browser's cache and app's in-memory cache. Note that browser and in-memory caches cannot be purged automatically, so use it with caution.
     /// </summary>
-    public int MaxAge { get; set; } = -1;
+    public long MaxAge { get; set; } = -1;
 
     /// <summary>
     /// Specifies the cache duration in seconds for shared caches. This setting caches the response in ASP.NET Core's output cache
     /// and CDN edge servers. The cache can be purged at any time using the ResponseCacheService.
     /// </summary>
-    public int SharedMaxAge { get; set; } = -1;
+    public long SharedMaxAge { get; set; } = -1;
 
     /// <summary>
     /// If the current request is authenticated, the pre-rendered HTML response might include the user's name, 

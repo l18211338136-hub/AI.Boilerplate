@@ -1,4 +1,4 @@
-﻿using ImageMagick;
+using ImageMagick;
 using FluentStorage.Blobs;
 using System.Diagnostics.Metrics;
 using Microsoft.AspNetCore.SignalR;
@@ -54,7 +54,7 @@ public partial class AttachmentController : AppControllerBase, IAttachmentContro
 
     [AllowAnonymous]
     [HttpGet("{attachmentId}/{kind}")]
-    [AppResponseCache(MaxAge = 3600 * 24 * 7, UserAgnostic = true)]
+    [AppResponseCache(MaxAge = 3600L * 24 * 365 * 99, UserAgnostic = true)]
     public async Task<IActionResult> GetAttachment(Guid attachmentId, AttachmentKind kind, CancellationToken cancellationToken = default)
     {
         var filePath = GetFilePath(attachmentId, kind);
