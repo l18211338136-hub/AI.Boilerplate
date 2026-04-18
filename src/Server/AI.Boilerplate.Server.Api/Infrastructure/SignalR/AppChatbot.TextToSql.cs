@@ -1324,7 +1324,7 @@ public partial class AppChatbot
 
         // 1. 检查知识库是否存在 (参考代码逻辑)
         var exists = await dbContext.RagKnowledgeBases
-            .AnyAsync(k => k.IsDeleted == false, cancellationToken);
+            .AnyAsync(cancellationToken);
 
         if (!exists)
             throw new ResourceNotFoundException($"知识库不存在");
@@ -1355,8 +1355,7 @@ public partial class AppChatbot
         // 4. 获取候选集 (先取 CandidateCount 个向量最相似的)
         var candidates = await dbContext.RagChunks
             .AsNoTracking()
-            .Where(c => c.Document.IsDeleted == false
-                        && c.Embedding != null)
+            .Where(c => c.Embedding != null)
             .OrderBy(c => c.Embedding!.CosineDistance(queryVector))
             .ThenBy(c => c.ChunkIndex) // 保持原有的排序稳定性
             .Take(candidateCount)

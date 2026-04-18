@@ -29,7 +29,6 @@ public class RagManagementStore
 
         var list = await dbContext.RagKnowledgeBases
             .AsNoTracking()
-            .Where(k => k.IsDeleted == false)
             .OrderByDescending(k => k.ModifiedOn)
             .Select(k => new RagKnowledgeBaseDto
             {
@@ -39,8 +38,8 @@ public class RagManagementStore
                 EmbeddingModel = k.EmbeddingModel,
                 EmbeddingDimension = k.EmbeddingDimension,
                 IsEnabled = k.IsEnabled,
-                DocumentCount = dbContext.RagDocuments.Count(d => d.KnowledgeBaseId == k.Id && d.IsDeleted == false),
-                ChunkCount = dbContext.RagChunks.Count(c => c.Document!.KnowledgeBaseId == k.Id && c.Document.IsDeleted == false),
+                DocumentCount = dbContext.RagDocuments.Count(d => d.KnowledgeBaseId == k.Id),
+                ChunkCount = dbContext.RagChunks.Count(c => c.Document!.KnowledgeBaseId == k.Id),
                 ModifiedOn = k.ModifiedOn
             })
             .ToListAsync(cancellationToken);
@@ -57,7 +56,7 @@ public class RagManagementStore
 
         var code = dto.Code.Trim();
         var codeLower = code.ToLowerInvariant();
-        var exists = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Code.ToLower() == codeLower && k.IsDeleted == false, cancellationToken);
+        var exists = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Code.ToLower() == codeLower, cancellationToken);
         if (exists)
             throw new ConflictException();
 
@@ -95,12 +94,12 @@ public class RagManagementStore
         if (string.IsNullOrWhiteSpace(dto.Code) || string.IsNullOrWhiteSpace(dto.Name) || string.IsNullOrWhiteSpace(dto.EmbeddingModel))
             throw new BadRequestException();
 
-        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId && k.IsDeleted == false, cancellationToken)
+        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         var code = dto.Code.Trim();
         var codeLower = code.ToLowerInvariant();
-        var hasConflictCode = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Id != knowledgeBaseId && k.Code.ToLower() == codeLower && k.IsDeleted == false, cancellationToken);
+        var hasConflictCode = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Id != knowledgeBaseId && k.Code.ToLower() == codeLower, cancellationToken);
         if (hasConflictCode)
             throw new ConflictException();
 
@@ -120,8 +119,8 @@ public class RagManagementStore
             EmbeddingModel = entity.EmbeddingModel,
             EmbeddingDimension = entity.EmbeddingDimension,
             IsEnabled = entity.IsEnabled,
-            DocumentCount = await dbContext.RagDocuments.CountAsync(d => d.KnowledgeBaseId == entity.Id && d.IsDeleted == false, cancellationToken),
-            ChunkCount = await dbContext.RagChunks.CountAsync(c => c.Document!.KnowledgeBaseId == entity.Id && c.Document.IsDeleted == false, cancellationToken),
+            DocumentCount = await dbContext.RagDocuments.CountAsync(d => d.KnowledgeBaseId == entity.Id, cancellationToken),
+            ChunkCount = await dbContext.RagChunks.CountAsync(c => c.Document!.KnowledgeBaseId == entity.Id, cancellationToken),
             ModifiedOn = entity.ModifiedOn
         };
     }
@@ -130,20 +129,14 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId && k.IsDeleted == false, cancellationToken)
+        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
-        entity.IsDeleted = true;
-        entity.DeletedOn = DateTimeOffset.UtcNow;
-        entity.ModifiedOn = DateTimeOffset.UtcNow;
 
-        var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId && d.IsDeleted == false).ToListAsync(cancellationToken);
-        foreach (var doc in documents)
-        {
-            doc.IsDeleted = true;
-            doc.DeletedOn = entity.DeletedOn;
-            doc.ModifiedOn = entity.DeletedOn.Value;
-        }
+        var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId).ToListAsync(cancellationToken);
+
+        dbContext.RagKnowledgeBases.Remove(entity);
+        dbContext.RagDocuments.RemoveRange(documents);
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
@@ -152,14 +145,14 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
+        var entity = await dbContext.RagKnowledgeBases.IgnoreQueryFilters().FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         entity.IsDeleted = false;
         entity.DeletedOn = null;
         entity.ModifiedOn = DateTimeOffset.UtcNow;
 
-        var documents = await dbContext.RagDocuments.Where(d => d.KnowledgeBaseId == knowledgeBaseId).ToListAsync(cancellationToken);
+        var documents = await dbContext.RagDocuments.IgnoreQueryFilters().Where(d => d.KnowledgeBaseId == knowledgeBaseId).ToListAsync(cancellationToken);
         foreach (var doc in documents)
         {
             doc.IsDeleted = false;
@@ -174,24 +167,28 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var entity = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
+        var entity = await dbContext.RagKnowledgeBases
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(k => k.Id == knowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
-        dbContext.RagKnowledgeBases.Remove(entity);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.RagKnowledgeBases
+           .IgnoreQueryFilters()
+           .Where(d => d.Id == entity.Id)
+           .ExecuteDeleteAsync(cancellationToken);
     }
 
     public async Task<List<RagDocumentDto>> GetDocuments(Guid knowledgeBaseId, CancellationToken cancellationToken)
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var exists = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Id == knowledgeBaseId && k.IsDeleted == false, cancellationToken);
+        var exists = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Id == knowledgeBaseId, cancellationToken);
         if (exists is false)
             throw new ResourceNotFoundException();
 
         var list = await dbContext.RagDocuments
             .AsNoTracking()
-            .Where(d => d.KnowledgeBaseId == knowledgeBaseId && d.IsDeleted == false)
+            .Where(d => d.KnowledgeBaseId == knowledgeBaseId)
             .OrderByDescending(d => d.LastIndexedAt)
             .Select(d => new RagDocumentDto
             {
@@ -220,7 +217,7 @@ public class RagManagementStore
         if (string.IsNullOrWhiteSpace(dto.SourceType) || string.IsNullOrWhiteSpace(dto.SourceId) || string.IsNullOrWhiteSpace(dto.Title))
             throw new BadRequestException();
 
-        var knowledgeBase = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == dto.KnowledgeBaseId && k.IsDeleted == false, cancellationToken)
+        var knowledgeBase = await dbContext.RagKnowledgeBases.FirstOrDefaultAsync(k => k.Id == dto.KnowledgeBaseId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         var now = DateTimeOffset.UtcNow;
@@ -276,7 +273,7 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var document = await dbContext.RagDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == documentId && d.IsDeleted == false, cancellationToken)
+        var document = await dbContext.RagDocuments.AsNoTracking().FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         var chunkTexts = await dbContext.RagChunks.AsNoTracking()
@@ -306,7 +303,7 @@ public class RagManagementStore
         if (string.IsNullOrWhiteSpace(dto.SourceType) || string.IsNullOrWhiteSpace(dto.SourceId) || string.IsNullOrWhiteSpace(dto.Title))
             throw new BadRequestException();
 
-        var document = await dbContext.RagDocuments.Include(d => d.KnowledgeBase).FirstOrDefaultAsync(d => d.Id == documentId && d.IsDeleted == false, cancellationToken)
+        var document = await dbContext.RagDocuments.Include(d => d.KnowledgeBase).FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
         var now = DateTimeOffset.UtcNow;
@@ -352,12 +349,10 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var document = await dbContext.RagDocuments.FirstOrDefaultAsync(d => d.Id == documentId && d.IsDeleted == false, cancellationToken)
+        var document = await dbContext.RagDocuments.FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
-        document.IsDeleted = true;
-        document.DeletedOn = DateTimeOffset.UtcNow;
-        document.ModifiedOn = document.DeletedOn.Value;
+        dbContext.RagDocuments.Remove(document);
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
@@ -365,7 +360,10 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var document = await dbContext.RagDocuments.Include(d => d.KnowledgeBase).FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
+        var document = await dbContext.RagDocuments
+            .IgnoreQueryFilters()
+            .Include(d => d.KnowledgeBase)
+            .FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
         if (document.KnowledgeBase?.IsDeleted is true)
             throw new BadRequestException();
@@ -381,11 +379,15 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var document = await dbContext.RagDocuments.FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
+        var document = await dbContext.RagDocuments
+            .IgnoreQueryFilters()
+            .FirstOrDefaultAsync(d => d.Id == documentId, cancellationToken)
             ?? throw new ResourceNotFoundException();
 
-        dbContext.RagDocuments.Remove(document);
-        await dbContext.SaveChangesAsync(cancellationToken);
+        await dbContext.RagDocuments
+            .IgnoreQueryFilters()
+            .Where(d => d.Id == document.Id)
+            .ExecuteDeleteAsync(cancellationToken);
     }
 
     public async Task<List<RagRecycleBinItemDto>> GetRecycleBinItems(CancellationToken cancellationToken)
@@ -393,6 +395,7 @@ public class RagManagementStore
         cancellationToken.ThrowIfCancellationRequested();
 
         var deletedKnowledgeBases = await dbContext.RagKnowledgeBases
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(k => k.IsDeleted == true)
             .Select(k => new RagRecycleBinItemDto
@@ -407,6 +410,7 @@ public class RagManagementStore
             .ToListAsync(cancellationToken);
 
         var deletedDocuments = await dbContext.RagDocuments
+            .IgnoreQueryFilters()
             .AsNoTracking()
             .Where(d => d.IsDeleted == true)
             .Select(d => new RagRecycleBinItemDto
@@ -427,7 +431,7 @@ public class RagManagementStore
     {
         cancellationToken.ThrowIfCancellationRequested();
 
-        var exists = await dbContext.RagDocuments.AnyAsync(d => d.Id == documentId && d.IsDeleted == false, cancellationToken);
+        var exists = await dbContext.RagDocuments.AnyAsync(d => d.Id == documentId, cancellationToken);
         if (exists is false)
             throw new ResourceNotFoundException();
 
@@ -454,7 +458,7 @@ public class RagManagementStore
         if (string.IsNullOrWhiteSpace(dto.Question))
             throw new BadRequestException();
 
-        var exists = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Id == dto.KnowledgeBaseId && k.IsDeleted == false, cancellationToken);
+        var exists = await dbContext.RagKnowledgeBases.AnyAsync(k => k.Id == dto.KnowledgeBaseId, cancellationToken);
         if (exists is false)
             throw new ResourceNotFoundException();
 
@@ -473,7 +477,7 @@ public class RagManagementStore
 
         var candidates = await dbContext.RagChunks
             .AsNoTracking()
-            .Where(c => c.Document!.KnowledgeBaseId == dto.KnowledgeBaseId && c.Document.IsDeleted == false && c.Embedding != null)
+            .Where(c => c.Document!.KnowledgeBaseId == dto.KnowledgeBaseId && c.Embedding != null)
             .OrderBy(c => c.Embedding!.CosineDistance(queryVector))
             .ThenBy(c => c.ChunkIndex)
             .Take(candidateCount)
